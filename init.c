@@ -19,6 +19,11 @@ main(void)
   dup(0);  // stdout
   dup(0);  // stderr
 
+  // team_members
+  printf(1, "SeyedAlirezaMirshafiee");
+  printf(1, "SadraAbbasi");
+  printf(1, "AmirSafari");
+
   for(;;){
     printf(1, "init: starting sh\n");
     pid = fork();
