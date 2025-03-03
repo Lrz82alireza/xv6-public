@@ -20,9 +20,9 @@ main(void)
   dup(0);  // stderr
 
   // team_members
-  printf(1, "SeyedAlirezaMirshafiee");
-  printf(1, "SadraAbbasi");
-  printf(1, "AmirSafari");
+  printf(1, "o- SeyedAlirezaMirshafiee\n");
+  printf(1, "o- SadraAbbasi\n");
+  printf(1, "o- AmirSafari\n");
 
   for(;;){
     printf(1, "init: starting sh\n");
