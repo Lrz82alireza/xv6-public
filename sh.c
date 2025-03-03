@@ -637,11 +637,11 @@ nulterminate(struct cmd *cmd)
     }
 
 
-    char *remove_between_sharps(const char *str) {
+    char *remove_between_sharps(const char *str) { 
+      //input : !abcd#nop#qrs#tuv#wxy#z , !!if asdads#123#456 , !if u re#sdsdf##q3
       if (!str) return NULL;
 
       int i, j = 0;
-      int in_sharp = 0;
       size_t len = strlen(str);
 
       char *output = (char *)malloc(len + 1); 
@@ -654,18 +654,20 @@ nulterminate(struct cmd *cmd)
                   next_sharp++;
               }
               if (str[next_sharp] == '#') { 
-                  in_sharp = !in_sharp;
-                  i = next_sharp; 
+                  i = next_sharp;
+                  continue;
+              }
+              else if(str[next_sharp] == '\0') {  
+                  output[j++] = str[i];  
                   continue;
               }
           }
-          if (!in_sharp) {
-              output[j++] = str[i];
-          }
+          else
+            output[j++] = str[i];
       }
       output[j-1] = '\0';
   
-      return output; 
+      return output;
   }
   
   void left_shift(char * str)
@@ -680,9 +682,9 @@ nulterminate(struct cmd *cmd)
   char * exclamation_process(char *cmd)
     {
       char * cmd_without_sharps = remove_between_sharps(cmd);
+      printf(2, "cmd_without_sharps: %s\n", cmd_without_sharps);
       left_shift(cmd_without_sharps);
       return colorize_keywords(cmd_without_sharps);
     }
   ///////////////////////////////////////////////  
   
-//free allocated memory
