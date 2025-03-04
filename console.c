@@ -6,7 +6,7 @@
 #include "defs.h"
 #include "param.h"
 #include "traps.h"
-#include "spinlock.h" 
+#include "spinlock.h"
 #include "sleeplock.h"
 #include "fs.h"
 #include "file.h"
@@ -14,6 +14,7 @@
 #include "mmu.h"
 #include "proc.h"
 #include "x86.h"
+
 
 static void consputc(int);
 
@@ -260,6 +261,7 @@ consoleintr(int (*getc)(void))
       break;
     }
   }
+
   release(&cons.lock);
   if(doprocdump) {
     procdump();  // now call procdump() wo. cons.lock held
@@ -298,6 +300,7 @@ consoleread(struct inode *ip, char *dst, int n)
     if(c == '\n')
       break;
   }
+
   release(&cons.lock);
   ilock(ip);
 
