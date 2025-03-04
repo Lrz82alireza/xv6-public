@@ -25,6 +25,19 @@ static struct {
   int locking;
 } cons;
 
+// History buffer
+#define INPUT_BUF 128
+#define HISTORY_SIZE 10
+#define HISTORY_LIMIT 5
+typedef struct {
+  char buf[HISTORY_SIZE][INPUT_BUF];
+  int index;
+  int size;
+} History;
+
+static History history = {.index = 0, .size = 0};
+
+
 static void
 printint(int xx, int base, int sign)
 {
@@ -64,7 +77,12 @@ cprintf(char *fmt, ...)
     acquire(&cons.lock);
 
   if (fmt == 0)
+  {
+    consputc('N');
+    consputc('\n');
+    consputc('N');
     panic("null fmt");
+  }
 
   argp = (uint*)(void*)(&fmt + 1);
   for(i = 0; (c = fmt[i] & 0xff) != 0; i++){
@@ -147,6 +165,7 @@ cgaputc(int c)
   } else
     crt[pos++] = (c&0xff) | 0x0700;  // black on white
 
+  // Check if pos is out of the screen.
   if(pos < 0 || pos > 25*80)
     panic("pos under/overflow");
 
@@ -179,7 +198,6 @@ consputc(int c)
   cgaputc(c);
 }
 
-#define INPUT_BUF 128
 struct {
   char buf[INPUT_BUF];
   uint r;  // Read index
@@ -196,32 +214,48 @@ consoleintr(int (*getc)(void))
 
   acquire(&cons.lock);
   while((c = getc()) >= 0){
+    
     switch(c){
-    case C('P'):  // Process listing.
+    case C('P'):  // Process listing. CTRL+P
       // procdump() locks cons.lock indirectly; invoke later
       doprocdump = 1;
       break;
-    case C('U'):  // Kill line.
+    case C('U'):  // Kill line. CTRL+U
       while(input.e != input.w &&
             input.buf[(input.e-1) % INPUT_BUF] != '\n'){
         input.e--;
         consputc(BACKSPACE);
       }
       break;
-    case C('H'): case '\x7f':  // Backspace
+    case '\x7f':  // Backspace
       if(input.e != input.w){
         input.e--;
         consputc(BACKSPACE);
       }
       break;
+    case C('H'): // CTRL + H. History
+
+      showHistory();
+
+      break;
+
+
     default:
       if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
         input.buf[input.e++ % INPUT_BUF] = c;
+
         consputc(c);
+
         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
           input.w = input.e;
           wakeup(&input.r);
+        }
+        
+        // If the command is finished, save it in history
+        if (c == '\n')
+        {
+          saveLastInHistory();
         }
       }
       break;
@@ -300,7 +334,44 @@ consoleinit(void)
   ioapicenable(IRQ_KBD, 0);
 }
 
+void saveLastInHistory()
+{
+  release(&cons.lock);
+  // Save the command in history  
+  strSplit(history.buf[history.index], input.buf, input.r, input.w - 1);
+  history.index = (history.index + 1) % HISTORY_SIZE;
+  if (history.size < HISTORY_SIZE)
+  {
+    history.size++;
+  } 
 
+  for (int i = 0; i < history.size; i++)
+  {
+    cprintf("%d: %s\n", i, history.buf[i]);
+  }
 
+  acquire(&cons.lock);
+}
 
+void showHistory()
+{
+  release(&cons.lock);
+  cprintf("--History BEGIN--\n\n");
+  int start = history.size < HISTORY_LIMIT ? 0 : history.size - HISTORY_LIMIT;
+  for (int i = history.size - 1; i >= start; i--)
+  {
+    cprintf("%s\n", history.buf[i]);
+  }
+  cprintf("\n--History END----\n");
+  acquire(&cons.lock);
+}
 
+void strSplit(char *dst, char *src, int start, int end)
+{
+  int i = 0;
+  for (int j = start; j < end; j++)
+  {
+    dst[i++] = src[j];
+  }
+  dst[i] = '\0';
+}
