@@ -39,6 +39,15 @@ typedef struct {
 static History history = {.index = 0, .size = 0};
 static History cmd_history = {.index = 0 , .size = 0};
 
+// size_t definition
+typedef unsigned int size_t;
+
+// Null declaration
+#define NULL ((char*)0)
+
+// Additional functions
+const char* processTabCommand();
+
 
 static void
 printint(int xx, int base, int sign)
@@ -236,9 +245,19 @@ consoleintr(int (*getc)(void))
       }
       break;
     case C('H'): // CTRL + H. History
-
       showHistory();
+      break;
 
+    case '\t': // Tab
+      {
+        
+        char *result = processTabCommand();
+        if (result) {
+          // todo: clean console
+          cprintf("%s", result);
+        }
+        
+      }
       break;
 
 
@@ -257,8 +276,10 @@ consoleintr(int (*getc)(void))
         // If the command is finished, save it in history
         if (c == '\n')
         {
+          release(&cons.lock);
           saveLastInHistory();
           saveLastInCmdHistory();
+          acquire(&cons.lock);
         }
       }
       break;
@@ -339,7 +360,6 @@ consoleinit(void)
 
 void saveLastInHistory()
 {
-  release(&cons.lock);
   // Save the command in history  
   strSplit(history.buf[history.index], input.buf, input.r, input.w - 1);
   history.index = (history.index + 1) % HISTORY_SIZE;
@@ -349,13 +369,10 @@ void saveLastInHistory()
     history.size++;
   } 
 
-  acquire(&cons.lock);
 }
 
 void saveLastInCmdHistory()
 {
-  release(&cons.lock);
-
   if (input.buf[input.r] != EXCLAMATION_CHAR)
   {
     strSplit(cmd_history.buf[cmd_history.index], input.buf, input.r, input.w - 1);
@@ -366,9 +383,6 @@ void saveLastInCmdHistory()
       cmd_history.size++;
     } 
   }
-
-
-  acquire(&cons.lock);
 }
 
 void showHistory()
@@ -380,13 +394,13 @@ void showHistory()
   {
     cprintf("%s\n", history.buf[i]);
   }
-  // show cmd_history
-  cprintf("command history :\n");
-  for (int i = cmd_history.size - 1; i >= 0; i--)
-  {
-    cprintf("%s\n", cmd_history.buf[i]);
-  }
-  //////////////////////////////////
+  // // show cmd_history
+  // cprintf("command history :\n");
+  // for (int i = cmd_history.size - 1; i >= 0; i--)
+  // {
+  //   cprintf("%s\n", cmd_history.buf[i]);
+  // }
+  // //////////////////////////////////
   cprintf("\n--History END----\n");
   cprintf("$ ");
   acquire(&cons.lock);
@@ -401,3 +415,34 @@ void strSplit(char *dst, char *src, int start, int end)
   }
   dst[i] = '\0';
 }
+
+const char* find_prefix_match() {
+  for (int i = cmd_history.size -1 ; i >= 0; i--) {
+      char* candidate = cmd_history.buf[i];
+      char* temp[INPUT_BUF];
+  
+      strSplit(temp, input.buf, input.r, input.w);
+      
+      cprintf("candidate : %s\n", candidate);
+      cprintf("temp : %s\n", input.buf[input.r - 1]);
+      int j = 0;
+      while (temp[j] != '\0' && candidate[j] != '\0' && temp[j] == candidate[j]) {
+          j++;
+      }
+      if (temp[j] == '\0') {
+          return candidate;
+      }
+  }
+  return NULL;
+}
+
+const char* processTabCommand()
+{
+  release(&cons.lock);
+  const char* result = find_prefix_match();
+  cprintf("result : %s\n", result);
+  acquire(&cons.lock);
+  return result;
+}
+
+
