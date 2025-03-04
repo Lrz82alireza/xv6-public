@@ -26,6 +26,10 @@ static struct {
   int locking;
 } cons;
 
+// KEY DRIVER CODE
+#define KBD_BACKSAPCE 0x08
+#define KBD_CTRL_H 0x19
+
 // History buffer
 #define INPUT_BUF 128
 #define HISTORY_SIZE 10
@@ -238,13 +242,13 @@ consoleintr(int (*getc)(void))
         consputc(BACKSPACE);
       }
       break;
-    case '\x7f':  // Backspace
+      case KBD_BACKSAPCE: case '\x7f':  // Backspace
       if(input.e != input.w){
         input.e--;
         consputc(BACKSPACE);
       }
       break;
-    case C('H'): // CTRL + H. History
+    case KBD_CTRL_H: // CTRL + H. History
       showHistory();
       break;
 
