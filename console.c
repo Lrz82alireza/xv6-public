@@ -316,10 +316,12 @@ consoleintr(int (*getc)(void))
         // If the command is finished, save it in history
         if (c == '\n')
         {
-          release(&cons.lock);
-          saveLastInHistory();
-          saveLastInCmdHistory();
-          acquire(&cons.lock);
+          if (input.r != input.w - 1) {
+            release(&cons.lock);
+            saveLastInHistory();
+            saveLastInCmdHistory();
+            acquire(&cons.lock);
+          }
         }
       }
       break;
