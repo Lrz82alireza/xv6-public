@@ -15,6 +15,7 @@
 #include "proc.h"
 #include "x86.h"
 
+const char EXCLAMATION_CHAR = '!';
 
 static void consputc(int);
 
@@ -36,6 +37,7 @@ typedef struct {
 } History;
 
 static History history = {.index = 0, .size = 0};
+static History cmd_history = {.index = 0 , .size = 0};
 
 
 static void
@@ -256,6 +258,7 @@ consoleintr(int (*getc)(void))
         if (c == '\n')
         {
           saveLastInHistory();
+          saveLastInCmdHistory();
         }
       }
       break;
@@ -340,15 +343,30 @@ void saveLastInHistory()
   // Save the command in history  
   strSplit(history.buf[history.index], input.buf, input.r, input.w - 1);
   history.index = (history.index + 1) % HISTORY_SIZE;
+
   if (history.size < HISTORY_SIZE)
   {
     history.size++;
   } 
 
-  for (int i = 0; i < history.size; i++)
+  acquire(&cons.lock);
+}
+
+void saveLastInCmdHistory()
+{
+  release(&cons.lock);
+
+  if (input.buf[input.r] != EXCLAMATION_CHAR)
   {
-    cprintf("%d: %s\n", i, history.buf[i]);
+    strSplit(cmd_history.buf[cmd_history.index], input.buf, input.r, input.w - 1);
+    cmd_history.index = (cmd_history.index + 1) % HISTORY_SIZE;
+
+    if (cmd_history.size < HISTORY_SIZE)
+    {
+      cmd_history.size++;
+    } 
   }
+
 
   acquire(&cons.lock);
 }
@@ -362,7 +380,15 @@ void showHistory()
   {
     cprintf("%s\n", history.buf[i]);
   }
+  // show cmd_history
+  cprintf("command history :\n");
+  for (int i = cmd_history.size - 1; i >= 0; i--)
+  {
+    cprintf("%s\n", cmd_history.buf[i]);
+  }
+  //////////////////////////////////
   cprintf("\n--History END----\n");
+  cprintf("$ ");
   acquire(&cons.lock);
 }
 

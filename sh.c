@@ -682,7 +682,7 @@ nulterminate(struct cmd *cmd)
   char * exclamation_process(char *cmd)
     {
       char * cmd_without_sharps = remove_between_sharps(cmd);
-      printf(2, "cmd_without_sharps: %s\n", cmd_without_sharps);
+      // printf(2, "cmd_without_sharps: %s\n", cmd_without_sharps);
       left_shift(cmd_without_sharps);
       return colorize_keywords(cmd_without_sharps);
     }
