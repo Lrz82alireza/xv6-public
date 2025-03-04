@@ -26,22 +26,36 @@ static struct {
   int locking;
 } cons;
 
+// Const Values
+#define INPUT_BUF 128
+
+
 // KEY DRIVER CODE
 #define KBD_BACKSAPCE 0x08
 #define KBD_CTRL_H 0x19
 
+// Clipboard buffer
+typedef struct {
+  char buf[INPUT_BUF];
+  int start_index;
+  int end_index;
+  int flag;
+  int valid;
+} Clipboard;
+static Clipboard clipboard = {.start_index = 0, .end_index = 0, .flag = 0, .valid = 0};
+
 // History buffer
-#define INPUT_BUF 128
 #define HISTORY_SIZE 10
 #define HISTORY_LIMIT 5
 typedef struct {
   char buf[HISTORY_SIZE][INPUT_BUF];
   int index;
   int size;
-} History;
+} HBuffer;
 
-static History history = {.index = 0, .size = 0};
-static History cmd_history = {.index = 0 , .size = 0};
+static HBuffer history = {.index = 0, .size = 0};
+static HBuffer cmd_history = {.index = 0 , .size = 0};
+
 
 // size_t definition
 typedef unsigned int size_t;
@@ -264,6 +278,20 @@ consoleintr(int (*getc)(void))
       }
       break;
 
+    case C('C'):
+      // CTRL+C
+      if (clipboard.flag == 1)
+      {
+        strSplit(clipboard.buf, input.buf, clipboard.end_index, clipboard.start_index);
+        resetClipboard();
+        clipboard.valid = 1;
+        break;
+      }
+
+      clipboard.flag = 1;
+      clipboard.start_index = clipboard.end_index = input.e - 1;
+      // to be continiued
+      break;
 
     default:
       if(c != 0 && input.e-input.r < INPUT_BUF){
@@ -446,4 +474,12 @@ const char* processTabCommand()
   return result;
 }
 
+
+// Clipboard Functions
+void resetClipboard()
+{
+  clipboard.flag = 0;
+  clipboard.start_index = 0;
+  clipboard.end_index = 0;
+}
 
