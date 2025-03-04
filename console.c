@@ -50,7 +50,8 @@ typedef unsigned int size_t;
 #define NULL ((char*)0)
 
 // Additional functions
-const char* processTabCommand();
+char* find_prefix_match();
+void clean_console(); //todo
 
 
 static void
@@ -254,14 +255,21 @@ consoleintr(int (*getc)(void))
 
     case '\t': // Tab
       {
+        release(&cons.lock);
+        char *result = find_prefix_match();
         
-        char *result = processTabCommand();
+        // Some clear function can go here
         if (result) {
-          // todo: clean console
+          for (int i = input.e; i > input.w; i--) {
+              consputc(BACKSPACE);
+          }
+          strncpy(input.buf + input.w, result, INPUT_BUF - input.w);
+          input.e = input.w + strlen(result);
+        //////////////////////////////////////
           cprintf("%s", result);
-        }
-        
       }
+    }
+      acquire(&cons.lock);
       break;
 
 
@@ -420,33 +428,29 @@ void strSplit(char *dst, char *src, int start, int end)
   dst[i] = '\0';
 }
 
-const char* find_prefix_match() {
-  for (int i = cmd_history.size -1 ; i >= 0; i--) {
-      char* candidate = cmd_history.buf[i];
-      char* temp[INPUT_BUF];
-  
-      strSplit(temp, input.buf, input.r, input.w);
-      
-      cprintf("candidate : %s\n", candidate);
-      cprintf("temp : %s\n", input.buf[input.r - 1]);
-      int j = 0;
-      while (temp[j] != '\0' && candidate[j] != '\0' && temp[j] == candidate[j]) {
-          j++;
-      }
-      if (temp[j] == '\0') {
-          return candidate;
-      }
+char* find_prefix_match() {
+  char temp[INPUT_BUF];
+  strSplit(temp, input.buf, input.w, input.e); 
+  int temp_len = strlen(temp);
+
+  // cprintf("Input prefix: %s\n", temp);
+
+  for (int i = cmd_history.size - 1; i >= 0; i--) {
+    char* candidate = cmd_history.buf[i];
+
+    // cprintf("Checking candidate: %s\n", candidate);
+
+    if (strncmp(temp, candidate, temp_len) == 0) {
+      // cprintf("Match found: %s\n", candidate);
+      return candidate;
+    }
   }
   return NULL;
 }
 
-const char* processTabCommand()
+void clean_console()
 {
-  release(&cons.lock);
-  const char* result = find_prefix_match();
-  cprintf("result : %s\n", result);
-  acquire(&cons.lock);
-  return result;
+  //todo
 }
 
 
