@@ -33,6 +33,7 @@ static struct {
 // KEY DRIVER CODE
 #define KBD_BACKSAPCE 0x08
 #define KBD_CTRL_H 0x19
+#define KBD_KEY_LEFT 0xE4
 
 // Clipboard buffer
 typedef struct {
@@ -43,6 +44,7 @@ typedef struct {
   int valid;
 } Clipboard;
 static Clipboard clipboard = {.start_index = 0, .end_index = 0, .flag = 0, .valid = 0};
+int being_copied = 0;
 
 // History buffer
 #define HISTORY_SIZE 10
@@ -244,13 +246,15 @@ consoleintr(int (*getc)(void))
 
   acquire(&cons.lock);
   while((c = getc()) >= 0){
-    
     switch(c){
     case C('P'):  // Process listing. CTRL+P
       // procdump() locks cons.lock indirectly; invoke later
       doprocdump = 1;
+      being_copied = 0;
+
       break;
     case C('U'):  // Kill line. CTRL+U
+      being_copied = 0;
       while(input.e != input.w &&
             input.buf[(input.e-1) % INPUT_BUF] != '\n'){
         input.e--;
@@ -258,17 +262,19 @@ consoleintr(int (*getc)(void))
       }
       break;
       case KBD_BACKSAPCE: case '\x7f':  // Backspace
+      being_copied = 0;
       if(input.e != input.w){
         input.e--;
         consputc(BACKSPACE);
       }
       break;
     case KBD_CTRL_H: // CTRL + H. History
+      being_copied = 0;
       showHistory();
       break;
 
     case '\t': // Tab
-      {
+        being_copied = 0;
         release(&cons.lock);
         char *result = find_prefix_match();
         
@@ -282,23 +288,51 @@ consoleintr(int (*getc)(void))
         //////////////////////////////////////
           cprintf("%s", result);
       }
-    }
+      
       acquire(&cons.lock);
       break;
-
-    case C('C'):
+      
+      case C('C'):
       // CTRL+C
       if (clipboard.flag == 1)
       {
         strSplit(clipboard.buf, input.buf, clipboard.end_index, clipboard.start_index);
         resetClipboard();
         clipboard.valid = 1;
+        being_copied = 0;
+        
         break;
       }
-
+      
       clipboard.flag = 1;
-      clipboard.start_index = clipboard.end_index = input.e - 1;
-      // to be continiued
+      clipboard.start_index = clipboard.end_index = input.e;
+      being_copied = 1;
+      break;
+      
+    case C('V'):
+      being_copied = 0;
+
+      // CTRL+V;
+      release(&cons.lock); 
+      if (clipboard.valid == 1)
+      {
+        cprintf("%s", clipboard.buf);
+        for (int i = 0; i < strlen(clipboard.buf); i++)
+        {
+          input.buf[input.e++ % INPUT_BUF] = clipboard.buf[i];
+        }
+        resetClipboard();
+      }
+      acquire(&cons.lock);
+      break;
+
+      case KBD_KEY_LEFT:
+      // Left Arrow
+      if (input.r != clipboard.end_index)
+      {
+        clipboard.end_index--;
+      }
+      being_copied = 1;
       break;
 
     default:
@@ -326,6 +360,11 @@ consoleintr(int (*getc)(void))
       }
       break;
     }
+  }
+
+  if (being_copied == 0)
+  {
+    resetClipboard();
   }
 
   release(&cons.lock);
