@@ -68,6 +68,11 @@ typedef unsigned int size_t;
 // Additional functions
 char* find_prefix_match();
 void clean_console(); //todo
+void saveLastInHistory();
+void saveLastInCmdHistory();
+void showHistory();
+void strSplit(char *dst, char *src, int start, int end);
+void resetClipboard();
 
 
 static void
