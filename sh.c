@@ -646,6 +646,7 @@ nulterminate(struct cmd *cmd)
 
       char *output = (char *)malloc(len + 1); 
       if (!output) return NULL; 
+      int is_first_sharp = 1;
   
       for (i = 0; str[i] != '\0'; i++) { 
           if (str[i] == '#') {
@@ -654,10 +655,11 @@ nulterminate(struct cmd *cmd)
                   next_sharp++;
               }
               if (str[next_sharp] == '#') { 
-                  i = next_sharp;
+                  i = next_sharp - 1;
+                  is_first_sharp = 0;
                   continue;
               }
-              else if(str[next_sharp] == '\0') {  
+              else if(str[next_sharp] == '\0' && is_first_sharp) {  
                   output[j++] = str[i];  
                   continue;
               }
@@ -666,7 +668,6 @@ nulterminate(struct cmd *cmd)
             output[j++] = str[i];
       }
       output[j-1] = '\0';
-  
       return output;
   }
   

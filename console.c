@@ -268,7 +268,7 @@ consoleintr(int (*getc)(void))
         //////////////////////////////////////
           cprintf("%s", result);
       }
-    }
+      }
       acquire(&cons.lock);
       break;
 
