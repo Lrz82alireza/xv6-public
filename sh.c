@@ -5,13 +5,8 @@
 #include "fcntl.h"
 #include "stat.h"
 
-
-// size_t definition
-typedef unsigned int size_t;
-
-
-// Null declaration
-#define NULL ((char*)0)
+// Exclemation command
+#define EXCLAMATION_CHAR '!'
 
 
 // Parsed command representation
@@ -20,41 +15,12 @@ typedef unsigned int size_t;
 #define PIPE  3
 #define LIST  4
 #define BACK  5
-
-#define MAXARGS 10
-
-// New functionality
-
-// Exclemation command
 #define EXCLAMATION 6
-#define KEYWORDS_CNT 7
-const char *KEYWORDS[KEYWORDS_CNT] = {"void", "int", "char", "if", "for", "while", "return"};
-const char *DELIMITER = " ";
-const char EXCLAMATION_CHAR = '!';
-const int INPUT_BUF = 128;
-
-const int COLOR_LEN = 7;
-const int RST_COLOR_LEN = 4;
-const int MIN_KEYWORD_LEN = 2;
-const int MAX_KEYWORD_LEN = 6;
-const int OUTPUT_BUF = (COLOR_LEN + RST_COLOR_LEN) * (INPUT_BUF / MIN_KEYWORD_LEN) + INPUT_BUF;
-
-
-//Auxiliary functions
-char * exclamation_process(char *cmd);
-
-// <string.h> standar functions
-char* strtok(char* str, const char* delimiters);
-char* strcat(char* dest, const char* src);
+#define MAXARGS 10
 
 
 struct cmd {
   int type;
-};
-
-struct exclamation{
-  int type;
-  char *cmd;
 };
 
 struct execcmd {
@@ -89,6 +55,13 @@ struct backcmd {
   struct cmd *cmd;
 };
 
+// Exclemation command handeling
+struct exclamation{
+  int type;
+  char *cmd;
+};
+
+
 int fork1(void);  // Fork but panics on failure.
 void panic(char*);
 struct cmd *parsecmd(char*);
@@ -104,7 +77,7 @@ runcmd(struct cmd *cmd)
   struct pipecmd *pcmd;
   struct redircmd *rcmd;
 
-  struct exclamation *excmd;
+  // struct exclamation *excmd; //we don't need this
 
   if(cmd == 0)
     exit();
@@ -114,9 +87,6 @@ runcmd(struct cmd *cmd)
     panic("runcmd");
   
   case EXCLAMATION:
-    excmd = (struct exclamation*) cmd;
-    printf(2, exclamation_process(excmd->cmd));
-    printf(2, "\n");
     break;
   
   case EXEC:
@@ -550,142 +520,3 @@ nulterminate(struct cmd *cmd)
 }
 
 
-// <string.h> standar functions  
-  char* strtok(char* str, const char* delimiters) {
-    static char* last = NULL
-  ;
-    if (str == NULL
-  ) str = last;
-  
-    if (str == NULL
-  ) return NULL
-  ;
-  
-    while (*str && strchr(delimiters, *str)) str++;
-  
-    if (*str == '\0') return NULL
-  ;
-  
-    char* start = str;
-  
-    while (*str && !strchr(delimiters, *str)) str++;
-  
-    if (*str) {
-        *str = '\0';
-        last = str + 1;
-    } else {
-        last = NULL
-      ;
-    }
-  
-    return start;
-  }
-
-  
-  char* strcat(char* dest, const char* src) {
-    char* orig_dest = dest;
-    while (*dest) {
-        dest++;
-    }
-    while (*src) {
-        *dest++ = *src++;
-    }
-    *dest = '\0';
-    return orig_dest;
-  }
-  
-  /////////////////////////////////////////////////
-
-  
-
-    // ! processing
-    int is_keyword(const char* word) {
-      for (int i = 0; i < KEYWORDS_CNT; i++) {
-          // printf(2, "word:%s\n", word);
-          // printf(2, "word_len:%d\n", strlen(word));
-          // printf(2, "KEYWORDS[i]:%s\n", KEYWORDS[i]);
-          // printf(2, "KEYWORDS[i]_len:%d\n", strlen(KEYWORDS[i]));
-      
-          if (strcmp(word, KEYWORDS[i]) == 0) {
-            // printf(2, "true\n");
-              return 1; //found
-          }
-      }
-      return 0;//not found
-    }
-  
-    char * colorize_keywords(char *cmd) {
-      char *output = (char *)malloc(OUTPUT_BUF);
-      char *token;
-      
-      token = strtok(cmd, DELIMITER);
-
-      while (token != NULL) {
-          
-          if (is_keyword(token)) {
-              strcat(output, "\033[34m"); 
-              strcat(output, token);
-              strcat(output, "\033[0m"); 
-          } else {
-              strcat(output, token);
-          }
-          strcat(output, " ");
-          token = strtok(NULL, DELIMITER);
-      }
-      // printf(2, "output: %s\n", output);
-      return output;
-    }
-
-
-    char *remove_between_sharps(const char *str) { 
-      //input : !abcd#nop#qrs#tuv#wxy#z , !!if asdads#123#456 , !if u re#sdsdf##q3
-      if (!str) return NULL;
-
-      int i, j = 0;
-      size_t len = strlen(str);
-
-      char *output = (char *)malloc(len + 1); 
-      if (!output) return NULL; 
-      int is_first_sharp = 1;
-  
-      for (i = 0; str[i] != '\0'; i++) { 
-          if (str[i] == '#') {
-              int next_sharp = i + 1;
-              while (str[next_sharp] != '\0' && str[next_sharp] != '#') {
-                  next_sharp++;
-              }
-              if (str[next_sharp] == '#') { 
-                  i = next_sharp - 1;
-                  is_first_sharp = 0;
-                  continue;
-              }
-              else if(str[next_sharp] == '\0' && is_first_sharp) {  
-                  output[j++] = str[i];  
-                  continue;
-              }
-          }
-          else
-            output[j++] = str[i];
-      }
-      output[j-1] = '\0';
-      return output;
-  }
-  
-  void left_shift(char * str)
-  {
-    while(*str != '\0')
-    {
-      *str = *(str + 1);
-      str++;
-    }
-  }
-
-  char * exclamation_process(char *cmd)
-    {
-      char * cmd_without_sharps = remove_between_sharps(cmd);
-      // printf(2, "cmd_without_sharps: %s\n", cmd_without_sharps);
-      left_shift(cmd_without_sharps);
-      return colorize_keywords(cmd_without_sharps);
-    }
-  ///////////////////////////////////////////////  
-  

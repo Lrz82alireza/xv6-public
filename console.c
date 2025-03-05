@@ -15,8 +15,6 @@
 #include "proc.h"
 #include "x86.h"
 
-const char EXCLAMATION_CHAR = '!';
-
 static void consputc(int);
 
 static int panicked = 0;
@@ -29,6 +27,30 @@ static struct {
 // Const Values
 #define INPUT_BUF 128
 
+// Exclemation command
+#define EXCLAMATION 6
+#define KEYWORDS_CNT 7
+const char *KEYWORDS[KEYWORDS_CNT] = {"void", "int", "char", "if", "for", "while", "return"};
+const char *DELIMITER = " ";
+const char EXCLAMATION_CHAR = '!';
+
+// Color codes
+#define BLACK 0x0
+#define BLUE 0x1
+#define GREEN 0x2
+#define CYAN 0x3
+#define RED 0x4
+#define MAGENTA 0x5
+#define BROWN 0x6
+#define LIGHT_GRAY 0x7
+#define DARK_GRAY 0x8
+#define LIGHT_BLUE 0x9
+#define LIGHT_GREEN 0xA
+#define LIGHT_CYAN 0xB
+#define LIGHT_RED 0xC
+#define LIGHT_MAGENTA 0xD
+#define YELLOW 0xE
+#define WHITE 0xF
 
 // KEY DRIVER CODE
 #define KBD_BACKSAPCE 0x08
@@ -58,10 +80,6 @@ typedef struct {
 static HBuffer history = {.index = 0, .size = 0};
 static HBuffer cmd_history = {.index = 0 , .size = 0};
 
-
-// size_t definition
-typedef unsigned int size_t;
-
 // Null declaration
 #define NULL ((char*)0)
 
@@ -73,6 +91,14 @@ void saveLastInCmdHistory();
 void showHistory();
 void strSplit(char *dst, char *src, int start, int end);
 void resetClipboard();
+void cprintf_color(char *str, uchar color);
+char* remove_between_sharps();
+void print_colored_keywords(char *input) ;
+
+// <string.h> standar functions
+char* strchr(const char* str, int c);
+int strcmp(const char* str1, const char* str2);
+char* strtok(char* str, const char* delimiters);
 
 
 static void
@@ -341,6 +367,7 @@ consoleintr(int (*getc)(void))
       break;
 
     default:
+
       if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
         input.buf[input.e++ % INPUT_BUF] = c;
@@ -351,6 +378,18 @@ consoleintr(int (*getc)(void))
           input.w = input.e;
           wakeup(&input.r);
         }
+
+        // ! processing
+        if(c == '\n' && input.buf[input.r] == EXCLAMATION_CHAR )
+        {
+          release(&cons.lock);
+          char* cmd_without_sharps = remove_between_sharps();
+          cprintf(" ");
+          print_colored_keywords(cmd_without_sharps);
+          cprintf("\n");
+          acquire(&cons.lock);
+        }
+        //////////////////////////////////////////////////////////
         
         // If the command is finished, save it in history
         if (c == '\n')
@@ -403,6 +442,8 @@ consoleread(struct inode *ip, char *dst, int n)
         // caller gets a 0-byte result.
         input.r--;
       }
+
+
       break;
     }
     *dst++ = c;
@@ -421,7 +462,6 @@ int
 consolewrite(struct inode *ip, char *buf, int n)
 {
   int i;
-
   iunlock(ip);
   acquire(&cons.lock);
   for(i = 0; i < n; i++)
@@ -536,3 +576,136 @@ void resetClipboard()
   clipboard.end_index = 0;
 }
 
+// Color functions
+void consputc_color(int c, uchar color) {
+  int pos;
+
+  outb(CRTPORT, 14);
+  pos = inb(CRTPORT+1) << 8;
+  outb(CRTPORT, 15);
+  pos |= inb(CRTPORT+1);
+
+  if(c == '\n')
+    pos += 80 - pos % 80;
+  else
+    crt[pos++] = (c & 0xff) | (color << 8);
+
+  if (pos >= 25 * 80) {
+    memmove(crt, crt + 80, sizeof(crt[0]) * 24 * 80);
+    pos -= 80;
+    memset(crt + pos, 0, sizeof(crt[0]) * (24 * 80 - pos));
+  }
+
+  outb(CRTPORT, 14);
+  outb(CRTPORT+1, pos >> 8);
+  outb(CRTPORT, 15);
+  outb(CRTPORT+1, pos);
+}
+
+void cprintf_color(char *str, uchar color) {
+  while (*str) {
+    consputc_color(*str++, color);
+  }
+}
+///////////////////////////////////////////////////////
+
+// <string.h> standar functions  
+char* strchr(const char* str, int c) {
+  while (*str) {
+      if (*str == (char)c) {
+          return (char*)str;
+      }
+      str++;
+  }
+  return NULL
+;
+}
+
+int strcmp(const char* str1, const char* str2) {
+  while (*str1 && (*str1 == *str2)) {
+      str1++;
+      str2++;
+  }
+  return (unsigned char)*str1 - (unsigned char)*str2;
+}
+
+char* strtok(char* str, const char* delimiters) {
+  static char* last = NULL
+;
+  if (str == NULL
+) str = last;
+
+  if (str == NULL
+) return NULL
+;
+
+  while (*str && strchr(delimiters, *str)) str++;
+
+  if (*str == '\0') return NULL;
+
+  char* start = str;
+  while (*str && !strchr(delimiters, *str)) str++;
+
+  if (*str) {
+      *str = '\0';
+      last = str + 1;
+  } else {
+      last = NULL;
+  }
+  return start;
+}
+/////////////////////////////////////////////////
+
+  // ! processing
+  int is_keyword(const char* word) {
+    for (int i = 0; i < KEYWORDS_CNT; i++) {    
+        if (strcmp(word, KEYWORDS[i]) == 0) {
+            return 1; //found
+        }
+    }
+    return 0;//not found
+  }
+
+  char* remove_between_sharps() { 
+    static char output[INPUT_BUF];
+    int j = 0;
+    int is_first_sharp = 1;
+  
+    for (int i = input.r + 1; i < input.w; i++) { 
+      if (input.buf[i] == '#') {
+        int next_sharp = i + 1;
+        while (next_sharp < input.w && input.buf[next_sharp] != '#') {
+          next_sharp++;
+        }
+        if (input.buf[next_sharp] == '#') { 
+          i = next_sharp - 1;
+          is_first_sharp = 0;
+          continue;
+        }
+        else if (i == input.w - 1 && is_first_sharp) {  
+          output[j++] = input.buf[i];  
+          continue;
+        }
+      }
+      else {
+        output[j++] = input.buf[i];
+      }
+    }
+    output[j-1] = '\0'; 
+    return output;
+  }
+
+void print_colored_keywords(char *input) { //input : !if x == 3 return 0
+  char *token;  
+  token = strtok(input, DELIMITER);
+
+  while (token != NULL) {
+      if (is_keyword(token)) {
+           cprintf_color(token, BLUE);
+      } else {
+          cprintf_color(token, WHITE);
+      }
+      consputc(' ');
+      token = strtok(NULL, DELIMITER);
+  }
+}
