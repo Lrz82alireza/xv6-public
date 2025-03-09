@@ -602,6 +602,7 @@ void consputc_color(int c, uchar color) {
   outb(CRTPORT+1, pos);
 }
 
+
 void cprintf_color(char *str, uchar color) {
   while (*str) {
     consputc_color(*str++, color);
