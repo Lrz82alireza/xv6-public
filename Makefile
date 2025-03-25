@@ -184,6 +184,7 @@ UPROGS=\
 	_wc\
 	_zombie\
 	_user_curly_brace_correction_check\
+	_next_palindrome\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -253,7 +254,7 @@ qemu-nox-gdb: fs.img xv6.img .gdbinit
 EXTRA=\
 	mkfs.c ulib.c user.h cat.c echo.c forktest.c grep.c kill.c\
 	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c\
-	printf.c umalloc.c\ user_curly_brace_correction_check.c\
+	printf.c umalloc.c\ user_curly_brace_correction_check.c\ next_palindrome.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\
 
