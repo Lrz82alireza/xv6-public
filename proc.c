@@ -532,3 +532,24 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+
+int
+next_palindrome(int num)
+{
+  int i=num;
+  while(1)
+  {
+    int number=i,reverse=0;
+    while(number>0)
+    {
+      int digit=number%10;
+      reverse=reverse*10+digit;
+      number/=10;
+    }
+    if(reverse==i)
+      break;
+    i++;
+  }
+  return i;
+}
