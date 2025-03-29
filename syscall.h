@@ -21,3 +21,5 @@
 #define SYS_mkdir  20
 #define SYS_close  21
 #define SYS_next_palindrome 22
+#define SYS_set_sleep_syscall 23
+#define SYS_get_system_time 24

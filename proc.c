@@ -553,3 +553,26 @@ next_palindrome(int num)
   }
   return i;
 }
+
+
+
+
+int
+set_sleep_syscall(int input_tick)
+{
+  int current_time;
+  acquire(&tickslock);
+  current_time=ticks;
+  release(&tickslock);
+  while(1)
+  {
+    acquire(&tickslock);
+    if(ticks-current_time==input_tick)
+    {
+      release(&tickslock);
+      break;
+    }
+    release(&tickslock);
+  }
+  return 0;
+} 
