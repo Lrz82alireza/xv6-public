@@ -103,7 +103,9 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
-
+extern int sys_next_palindrome(void);
+extern int sys_set_sleep_syscall(void);
+extern int sys_get_system_time(void);
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,
@@ -126,6 +128,9 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_next_palindrome] sys_next_palindrome,
+[SYS_set_sleep_syscall] sys_set_sleep_syscall,
+[SYS_get_system_time] sys_get_system_time,
 };
 
 void

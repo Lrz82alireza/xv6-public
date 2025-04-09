@@ -532,3 +532,47 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+
+int
+next_palindrome(int num)
+{
+  int i=num;
+  while(1)
+  {
+    int number=i,reverse=0;
+    while(number>0)
+    {
+      int digit=number%10;
+      reverse=reverse*10+digit;
+      number/=10;
+    }
+    if(reverse==i)
+      break;
+    i++;
+  }
+  return i;
+}
+
+
+
+
+int
+set_sleep_syscall(int input_tick)
+{
+  int current_time;
+  acquire(&tickslock);
+  current_time=ticks;
+  release(&tickslock);
+  while(1)
+  {
+    acquire(&tickslock);
+    if(ticks-current_time==input_tick)
+    {
+      release(&tickslock);
+      break;
+    }
+    release(&tickslock);
+  }
+  return 0;
+} 

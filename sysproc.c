@@ -89,3 +89,38 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+
+
+
+int
+sys_next_palindrome(void)
+{
+  int in_num=myproc()->tf->ebx;
+  return next_palindrome(in_num);
+}
+
+
+
+int
+sys_set_sleep_syscall(void)
+{
+  int input_tick;
+  if (argint(0,&input_tick)<0)
+    return -1;
+  if(set_sleep_syscall(input_tick)==-1)
+    return -1;
+  return 0;
+}
+
+
+
+int
+sys_get_system_time(void)
+{
+  struct rtcdate* current_time;
+  if (argptr(0, (void*)&current_time, sizeof(*current_time)) < 0)
+    return -1;
+  cmostime(current_time);
+  return 0;
+}

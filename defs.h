@@ -120,6 +120,9 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+int             next_palindrome(int);
+int             set_sleep_syscall(int);
+int             get_system_time(struct rtcdate*);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
