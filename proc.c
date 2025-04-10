@@ -550,7 +550,7 @@ procdump(void)
 void
 next_palindrome(int num)
 {
-  int i=num+1;
+  int i=num;
   while(1)
   {
     int number=i,reverse=0;
