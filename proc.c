@@ -547,10 +547,10 @@ procdump(void)
 }
 
 
-int
+void
 next_palindrome(int num)
 {
-  int i=num;
+  int i=num+1;
   while(1)
   {
     int number=i,reverse=0;
@@ -564,7 +564,7 @@ next_palindrome(int num)
       break;
     i++;
   }
-  return i;
+  cprintf("result: %d\n",i);
 }
 
 int
