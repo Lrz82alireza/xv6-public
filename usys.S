@@ -32,3 +32,8 @@ SYSCALL(uptime)
 SYSCALL(next_palindrome)
 SYSCALL(set_sleep_syscall)
 SYSCALL(get_system_time)
+
+SYSCALL(make_user)
+SYSCALL(login)
+SYSCALL(logout)
+SYSCALL(logs)

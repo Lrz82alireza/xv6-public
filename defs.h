@@ -124,6 +124,11 @@ int             next_palindrome(int);
 int             set_sleep_syscall(int);
 int             get_system_time(struct rtcdate*);
 
+int             make_user(int, const char*);
+int             login(int, const char*);
+int             logout(void);
+int             logs(void);
+
 // swtch.S
 void            swtch(struct context**, struct context*);
 

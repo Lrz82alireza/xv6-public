@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "x86.h"
 #include "syscall.h"
+#include "user_mgmt.h"
 
 // User code makes a system call with INT T_SYSCALL.
 // System call number in %eax.
@@ -106,6 +107,12 @@ extern int sys_uptime(void);
 extern int sys_next_palindrome(void);
 extern int sys_set_sleep_syscall(void);
 extern int sys_get_system_time(void);
+// log sys calls
+extern int sys_make_user(void);
+extern int sys_login(void);
+extern int  sys_logout(void);
+extern int  sys_logs(void);
+
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,
@@ -131,7 +138,41 @@ static int (*syscalls[])(void) = {
 [SYS_next_palindrome] sys_next_palindrome,
 [SYS_set_sleep_syscall] sys_set_sleep_syscall,
 [SYS_get_system_time] sys_get_system_time,
+
+[SYS_make_user] sys_make_user,
+[SYS_login] sys_login,
+[SYS_logout] sys_logout,
+[SYS_logs] sys_logs,
 };
+
+int 
+should_log_syscall(int num) {
+  int allowed[] = {
+    SYS_make_user,
+    SYS_login,
+    SYS_logout,
+    SYS_next_palindrome,
+    SYS_mkdir,
+    SYS_open,
+    SYS_unlink,
+    SYS_exec,
+    SYS_fork,
+    SYS_kill,
+    SYS_wait,
+    SYS_chdir,
+    SYS_getpid,
+    SYS_sbrk,
+    SYS_sleep,
+    SYS_uptime,
+    SYS_logs,
+  };
+  int len = sizeof(allowed) / sizeof(int);
+  for(int i = 0; i < len; i++)
+    if (allowed[i] == num)
+      return 1;
+  return 0;
+}
+
 
 void
 syscall(void)
@@ -142,6 +183,12 @@ syscall(void)
   num = curproc->tf->eax;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     curproc->tf->eax = syscalls[num]();
+    
+    //Add authorized system call
+    if (curproc->name[0] != '\0' && curproc->pid > 2 && should_log_syscall(num)) {
+      log_syscall(num);
+    }
+
   } else {
     cprintf("%d %s: unknown sys call %d\n",
             curproc->pid, curproc->name, num);

@@ -7,6 +7,11 @@
 #include "proc.h"
 #include "spinlock.h"
 
+#include "user_mgmt.h" 
+
+extern struct user *curr_user;
+extern struct spinlock login_lock;
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -246,6 +251,14 @@ exit(void)
   iput(curproc->cwd);
   end_op();
   curproc->cwd = 0;
+
+  // // Logout current user if this process was logged in
+  // acquire(&login_lock);
+  // if ((curr_user->is_logged_in == 1) && (curproc->user_id == curr_user->user_id)) {
+  //   curr_user->is_logged_in = 0;
+  // }
+  // release(&login_lock);
+  // ///////////////////////////////////////////////////////
 
   acquire(&ptable.lock);
 
@@ -554,7 +567,25 @@ next_palindrome(int num)
   return i;
 }
 
+int
+make_user(int user_id, const char* password) {
+    return add_user(user_id, password);
+}
 
+int
+login(int user_id, const char* password) {
+  return login_user(user_id , password);
+}
+
+int
+logout(){
+  return logout_user();
+}
+
+int logs(){
+  get_user_logs();
+  return 0;
+}
 
 
 int

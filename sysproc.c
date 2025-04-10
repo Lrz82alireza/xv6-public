@@ -100,7 +100,41 @@ sys_next_palindrome(void)
   return next_palindrome(in_num);
 }
 
+int 
+sys_make_user(void) {
+  int user_id;
+  char* password;
 
+  if (argint(0, &user_id) < 0)
+      return -1;
+  if (argstr(1, &password) < 0)
+      return -1;
+
+  return make_user(user_id, password);
+}
+
+int 
+sys_login(void){
+  int user_id;
+  char* password;
+
+  if (argint(0, &user_id) < 0)
+      return -1;
+  if (argstr(1, &password) < 0)
+      return -1;
+
+  return login(user_id , password);
+}
+
+int
+sys_logout(void){
+  return logout();
+}
+
+int
+sys_logs(void){
+  return logs();
+}
 
 int
 sys_set_sleep_syscall(void)

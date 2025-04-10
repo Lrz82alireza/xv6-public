@@ -27,6 +27,7 @@ OBJS = \
 	uart.o\
 	vectors.o\
 	vm.o\
+	user_mgmt.o\
 
 # Cross-compiling (e.g., on Mac OS X)
 # TOOLPREFIX = i386-jos-elf
@@ -185,6 +186,10 @@ UPROGS=\
 	_zombie\
 	_user_curly_brace_correction_check\
 	_next_palindrome\
+	_make_user\
+	_login\
+	_logout\
+	_logs\
 	_set_sleep_syscall\
 
 fs.img: mkfs README $(UPROGS)

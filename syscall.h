@@ -23,3 +23,9 @@
 #define SYS_next_palindrome 22
 #define SYS_set_sleep_syscall 23
 #define SYS_get_system_time 24
+
+// log sys calls
+#define SYS_make_user 25
+#define SYS_login 26
+#define SYS_logout 27
+#define SYS_logs 28

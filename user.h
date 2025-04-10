@@ -27,6 +27,11 @@ int next_palindrome(int num);
 int set_sleep_syscall(int tick);
 int get_system_time(struct rtcdate*);
 
+int make_user(int user_id, const char* password);
+int login(int user_id, const char* password);
+int logout();
+int logs();
+
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);
