@@ -8,7 +8,7 @@ int main(int argc,char *argv[])
         printf(1,"%s\n",WRONGINPUTTRYAGAIN);
         exit();
     }
-    int num=atoi(argv[1]),prev_val_ebx,palindrome;
+    int num=atoi(argv[1]),prev_val_ebx;
     asm volatile(
         "movl %%ebx, %0\n\t"
         "movl %1, %%ebx"
@@ -16,13 +16,12 @@ int main(int argc,char *argv[])
         :"r" (num)
         :"ebx" 
     );
-    palindrome=next_palindrome(num);
+    next_palindrome(num);
     asm volatile(
         "movl %0, %%ebx"
         :
         :"r" (prev_val_ebx)
         :"ebx" 
     );
-    printf(1,"result: %d\n",palindrome);
     exit();
 }

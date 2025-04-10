@@ -23,7 +23,7 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int next_palindrome(int num);
+void next_palindrome(int num);
 int set_sleep_syscall(int tick);
 int get_system_time(struct rtcdate*);
 

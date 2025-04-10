@@ -4,8 +4,9 @@
 #include "date.h"
 #define WRONGINPUTTRYAGAIN "invalid command!try again\n"
 #define ISSUEOCCURED "issue occured\n"
-#define STARTEDYEARBYCMOSTIME 2001
-int is_leap_year(int year) {
+#define STARTEDYEARBYCMOSTIME 2000
+int is_leap_year(int year)
+{
     return (year%4==0 && (year%100!=0 || year%400==0));
 }
 int convert_time_to_second(struct rtcdate* recorded_time)
@@ -21,7 +22,7 @@ int convert_time_to_second(struct rtcdate* recorded_time)
     }
     for (int i=1;i<recorded_time->month;i++) {
       day_to_second+=days_per_month[i];
-      if(i== 2&&is_leap_year(year_by_cmostime))
+      if(i==2 && is_leap_year(year_by_cmostime))
         day_to_second+=1;
     }
     day_to_second+=recorded_time->day-1;
@@ -30,7 +31,7 @@ int convert_time_to_second(struct rtcdate* recorded_time)
 }
 int main(int argc,char *argv[])
 {
-    int is_command_worked=-1,diffrence=0,before_sleep_in_second=0,after_sleep_in_second=0;
+    int diffrence=0,before_sleep_in_second=0,after_sleep_in_second=0;
     struct rtcdate before_sleep,after_sleep;
     if(argc!=2)
     {
@@ -39,17 +40,15 @@ int main(int argc,char *argv[])
     }
     int input_tick=atoi(argv[1]);
     get_system_time(&before_sleep);
-    is_command_worked=set_sleep_syscall(input_tick);
-    get_system_time(&after_sleep);
-    before_sleep_in_second=convert_time_to_second(&before_sleep);
-    after_sleep_in_second=convert_time_to_second(&after_sleep);
-    if(is_command_worked==0)
-        diffrence=after_sleep_in_second-before_sleep_in_second;
-    else if(is_command_worked==-1)
+    if(set_sleep_syscall(input_tick)<0)
     {
         printf(1,ISSUEOCCURED);
         exit();
     }
+    get_system_time(&after_sleep);
+    before_sleep_in_second=convert_time_to_second(&before_sleep);
+    after_sleep_in_second=convert_time_to_second(&after_sleep);
+    diffrence=after_sleep_in_second-before_sleep_in_second;
     printf(1,"result:%d\n",diffrence);
     exit();
 }
