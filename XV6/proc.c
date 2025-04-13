@@ -8,7 +8,6 @@
 #include "spinlock.h"
 
 #include "user_mgmt.h" 
-#include "user.h"
 
 extern struct user *curr_user;
 extern struct spinlock login_lock;
@@ -588,33 +587,49 @@ int logs(){
   return 0;
 }
 
-int diff(const char *file1, const char *file2)
+int
+diff(const char *path1, const char *path2)
 {
-  int result = 0;
-  char *buf1 = malloc(512);
-  char *buf2 = malloc(512);
-  int fd1 = open(file1, 0);
-  int fd2 = open(file2, 0);
-  if (fd1 < 0 || fd2 < 0) {
-    printf(1, "Error opening files\n");
-    return -1;
-  }
+  struct inode *ip1, *ip2;
+  char buf1[512], buf2[512];
   int n1, n2;
-  while ((n1 = read(fd1, buf1, 512)) > 0 && (n2 = read(fd2, buf2, 512)) > 0) {
-    if (n1 != n2 || memcmp(buf1, buf2, n1) != 0) {
-      result = -1;
+  int offset = 0;
+  int different = 0;
+
+  begin_op();
+
+  ip1 = namei((char*)path1);
+  ip2 = namei((char*)path2);
+
+  if(ip1 == 0 || ip2 == 0){
+    end_op();
+    return -1; // فایل پیدا نشد
+  }
+
+  ilock(ip1);
+  ilock(ip2);
+
+  do {
+    n1 = readi(ip1, buf1, offset, sizeof(buf1));
+    n2 = readi(ip2, buf2, offset, sizeof(buf2));
+
+    if(n1 != n2 || memcmp(buf1, buf2, n1) != 0){
+      different = 1;
       break;
     }
-  }
-  if (n1 != n2) {
-    result = -1;
-  }
-  close(fd1);
-  close(fd2);
-  free(buf1);
-  free(buf2);
-  return 0;
+
+    offset += n1;
+  } while(n1 > 0 && n2 > 0);
+
+  iunlock(ip1);
+  iput(ip1);
+  iunlock(ip2);
+  iput(ip2);
+  end_op();
+
+  return different;
 }
+
 int
 set_sleep_syscall(int input_tick)
 {
