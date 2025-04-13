@@ -594,7 +594,7 @@ diff(const char *path1, const char *path2)
   char buf1[512], buf2[512];
   int n1, n2;
   int offset = 0;
-  int different = 0;
+  int line_number = 1;
 
   begin_op();
 
@@ -603,23 +603,37 @@ diff(const char *path1, const char *path2)
 
   if(ip1 == 0 || ip2 == 0){
     end_op();
-    return -1; // فایل پیدا نشد
+    return -1;
   }
 
   ilock(ip1);
   ilock(ip2);
 
-  do {
+  while (1) {
     n1 = readi(ip1, buf1, offset, sizeof(buf1));
     n2 = readi(ip2, buf2, offset, sizeof(buf2));
 
     if(n1 != n2 || memcmp(buf1, buf2, n1) != 0){
-      different = 1;
+      cprintf("Difference found at line %d:\n", line_number);
+      cprintf("File 1: ");
+      for (int i = 0; i < n1; i++) {
+        cprintf("%c", buf1[i]);
+      }
+      cprintf("\n");
+
+      cprintf("File 2: ");
+      for (int i = 0; i < n2; i++) {
+        cprintf("%c", buf2[i]);
+      }
+      cprintf("\n");
       break;
     }
 
+    if (n1 == 0 || n2 == 0) break;
+
     offset += n1;
-  } while(n1 > 0 && n2 > 0);
+    line_number++;
+  }
 
   iunlock(ip1);
   iput(ip1);
@@ -627,7 +641,7 @@ diff(const char *path1, const char *path2)
   iput(ip2);
   end_op();
 
-  return different;
+  return 0; 
 }
 
 int
