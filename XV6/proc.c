@@ -588,61 +588,65 @@ int logs(){
 }
 
 int
-diff(const char *path1, const char *path2)
+diff(const char *file1, const char *file2)
 {
   struct inode *ip1, *ip2;
-  char buf1[512], buf2[512];
-  int n1, n2;
-  int offset = 0;
-  int line_number = 1;
+  char line1[128], line2[128];
+  uint offset1 = 0, offset2 = 0;
+  int line_num = 1;
+  int equal = 1;
 
-  begin_op();
+  ip1 = namei(file1);
+  ip2 = namei(file2);
 
-  ip1 = namei((char*)path1);
-  ip2 = namei((char*)path2);
-
-  if(ip1 == 0 || ip2 == 0){
-    end_op();
+  if (ip1 == 0 || ip2 == 0)
     return -1;
-  }
 
   ilock(ip1);
   ilock(ip2);
 
   while (1) {
-    n1 = readi(ip1, buf1, offset, sizeof(buf1));
-    n2 = readi(ip2, buf2, offset, sizeof(buf2));
+    int i = 0;
+    char ch;
 
-    if(n1 != n2 || memcmp(buf1, buf2, n1) != 0){
-      cprintf("Difference found at line %d:\n", line_number);
-      cprintf("File 1: ");
-      for (int i = 0; i < n1; i++) {
-        cprintf("%c", buf1[i]);
-      }
-      cprintf("\n");
+    memset(line1, 0, sizeof(line1));
+    while (i < sizeof(line1) - 1 && readi(ip1, &ch, offset1, 1) == 1) {
+      offset1++;
+      if (ch == '\n' || ch == '\r')
+        break;
+      line1[i++] = ch;
+    }
+    line1[i] = 0;
+    int len1 = i;
 
-      cprintf("File 2: ");
-      for (int i = 0; i < n2; i++) {
-        cprintf("%c", buf2[i]);
-      }
-      cprintf("\n");
+    i = 0;
+    memset(line2, 0, sizeof(line2));
+    while (i < sizeof(line2) - 1 && readi(ip2, &ch, offset2, 1) == 1) {
+      offset2++;
+      if (ch == '\n' || ch == '\r')
+        break;
+      line2[i++] = ch;
+    }
+    line2[i] = 0;
+    int len2 = i;
+
+    if (len1 == 0 && len2 == 0)
       break;
+
+    if (strncmp(line1, line2, sizeof(line1)) != 0) {
+      cprintf("Line %d:\n  %s: %s\n  %s: %s\n", line_num, file1, line1, file2, line2);
+      equal = 0;
     }
 
-    if (n1 == 0 || n2 == 0) break;
-
-    offset += n1;
-    line_number++;
+    line_num++;
   }
 
-  iunlock(ip1);
-  iput(ip1);
-  iunlock(ip2);
-  iput(ip2);
-  end_op();
+  iunlockput(ip1);
+  iunlockput(ip2);
 
-  return 0; 
+  return equal ? 0 : -1;
 }
+
 
 int
 set_sleep_syscall(int input_tick)
