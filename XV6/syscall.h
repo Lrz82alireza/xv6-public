@@ -29,3 +29,6 @@
 #define SYS_login 26
 #define SYS_logout 27
 #define SYS_logs 28
+
+// diff
+#define SYS_diff 29

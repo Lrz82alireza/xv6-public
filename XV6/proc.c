@@ -587,6 +587,48 @@ int logs(){
   return 0;
 }
 
+int
+diff(const char *path1, const char *path2)
+{
+  struct inode *ip1, *ip2;
+  char buf1[512], buf2[512];
+  int n1, n2;
+  int offset = 0;
+  int different = 0;
+
+  begin_op();
+
+  ip1 = namei((char*)path1);
+  ip2 = namei((char*)path2);
+
+  if(ip1 == 0 || ip2 == 0){
+    end_op();
+    return -1; // فایل پیدا نشد
+  }
+
+  ilock(ip1);
+  ilock(ip2);
+
+  do {
+    n1 = readi(ip1, buf1, offset, sizeof(buf1));
+    n2 = readi(ip2, buf2, offset, sizeof(buf2));
+
+    if(n1 != n2 || memcmp(buf1, buf2, n1) != 0){
+      different = 1;
+      break;
+    }
+
+    offset += n1;
+  } while(n1 > 0 && n2 > 0);
+
+  iunlock(ip1);
+  iput(ip1);
+  iunlock(ip2);
+  iput(ip2);
+  end_op();
+
+  return different;
+}
 
 int
 set_sleep_syscall(int input_tick)

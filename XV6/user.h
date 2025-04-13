@@ -32,6 +32,7 @@ int login(int user_id, const char* password);
 int logout();
 int logs();
 
+int diff(const char* file1, const char* file2);
 
 // ulib.c
 int stat(const char*, struct stat*);
