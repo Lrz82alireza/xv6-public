@@ -140,6 +140,7 @@ sys_logs(void){
 int 
 sys_diff(void)
 {
+  // get data from trap's stack
   char* file1;
   char* file2;
   if(argstr(0, &file1)<0)

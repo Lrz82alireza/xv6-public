@@ -190,6 +190,7 @@ UPROGS=\
 	_login\
 	_logout\
 	_logs\
+	_diff\
 	_testgetpid\
 	_set_sleep_syscall\
 

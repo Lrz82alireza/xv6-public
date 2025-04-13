@@ -130,6 +130,8 @@ int             login(int, const char*);
 int             logout(void);
 int             logs(void);
 
+int             diff(const char *file1, const char *file2);
+
 // swtch.S
 void            swtch(struct context**, struct context*);
 
