@@ -603,7 +603,7 @@ diff(const char *path1, const char *path2)
 
   if(ip1 == 0 || ip2 == 0){
     end_op();
-    return -1; // فایل پیدا نشد
+    return -1; 
   }
 
   ilock(ip1);
