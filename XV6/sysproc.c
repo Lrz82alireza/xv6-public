@@ -149,7 +149,7 @@ sys_diff(void)
     return -1;
 
   int result = diff(file1, file2);
-  return 0;
+  return result;
 }
 
 int

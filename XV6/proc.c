@@ -600,10 +600,32 @@ diff(const char *file1, const char *file2)
   ip2 = namei(file2);
 
   if (ip1 == 0 || ip2 == 0)
+  {
+    cprintf("Error: one of the files does not exist\n");
     return -1;
+  }
 
   ilock(ip1);
   ilock(ip2);
+
+  // test
+  char buf[512];
+  int bytes_read;
+  uint offset = 0;
+  cprintf("File 1: %s\n", file1);
+  while ((bytes_read = readi(ip1, buf, offset, sizeof(buf))) > 0) {
+    offset += bytes_read;
+    for (int i = 0; i < bytes_read; i++) {
+      cprintf("%c", buf[i]);
+    }
+  }
+  cprintf("\nFile 2: %s\n", file1);
+  while ((bytes_read = readi(ip2, buf, offset, sizeof(buf))) > 0) {
+    offset += bytes_read;
+    for (int i = 0; i < bytes_read; i++) {
+      cprintf("%c", buf[i]);
+    }
+  }
 
   while (1) {
     int i = 0;
