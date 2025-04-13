@@ -190,6 +190,7 @@ UPROGS=\
 	_login\
 	_logout\
 	_logs\
+	_testgetpid\
 	_set_sleep_syscall\
 
 fs.img: mkfs README $(UPROGS)
