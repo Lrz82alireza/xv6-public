@@ -113,6 +113,9 @@ extern int sys_login(void);
 extern int  sys_logout(void);
 extern int  sys_logs(void);
 
+// diff
+extern int sys_diff(void);
+
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,
@@ -143,6 +146,10 @@ static int (*syscalls[])(void) = {
 [SYS_login] sys_login,
 [SYS_logout] sys_logout,
 [SYS_logs] sys_logs,
+
+// diff
+[SYS_diff] sys_diff,
+
 };
 
 int 

@@ -137,6 +137,20 @@ sys_logs(void){
   return logs();
 }
 
+int 
+sys_diff(void)
+{
+  char* file1;
+  char* file2;
+  if(argstr(0, &file1)<0)
+    return -1;
+  if(argstr(1, &file2)<0)
+    return -1;
+
+  int result = diff(file1, file2);
+  return 0;
+}
+
 int
 sys_set_sleep_syscall(void)
 {

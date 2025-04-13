@@ -37,3 +37,5 @@ SYSCALL(make_user)
 SYSCALL(login)
 SYSCALL(logout)
 SYSCALL(logs)
+
+SYSCALL(diff)

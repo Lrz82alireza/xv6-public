@@ -8,6 +8,7 @@
 #include "spinlock.h"
 
 #include "user_mgmt.h" 
+#include "user.h"
 
 extern struct user *curr_user;
 extern struct spinlock login_lock;
@@ -587,7 +588,33 @@ int logs(){
   return 0;
 }
 
-
+int diff(const char *file1, const char *file2)
+{
+  int result = 0;
+  char *buf1 = malloc(512);
+  char *buf2 = malloc(512);
+  int fd1 = open(file1, 0);
+  int fd2 = open(file2, 0);
+  if (fd1 < 0 || fd2 < 0) {
+    printf(1, "Error opening files\n");
+    return -1;
+  }
+  int n1, n2;
+  while ((n1 = read(fd1, buf1, 512)) > 0 && (n2 = read(fd2, buf2, 512)) > 0) {
+    if (n1 != n2 || memcmp(buf1, buf2, n1) != 0) {
+      result = -1;
+      break;
+    }
+  }
+  if (n1 != n2) {
+    result = -1;
+  }
+  close(fd1);
+  close(fd2);
+  free(buf1);
+  free(buf2);
+  return 0;
+}
 int
 set_sleep_syscall(int input_tick)
 {
