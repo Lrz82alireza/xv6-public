@@ -613,6 +613,7 @@ diff(const char *path1, const char *path2)
     n1 = readi(ip1, buf1, offset, sizeof(buf1));
     n2 = readi(ip2, buf2, offset, sizeof(buf2));
 
+
     if(n1 != n2 || memcmp(buf1, buf2, n1) != 0){
       cprintf("Difference found at line %d:\n", line_number);
       cprintf("File 1: ");
