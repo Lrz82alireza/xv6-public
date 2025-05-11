@@ -39,3 +39,6 @@ SYSCALL(logout)
 SYSCALL(logs)
 
 SYSCALL(diff)
+
+SYSCALL(create_realtime_process)
+

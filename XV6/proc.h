@@ -1,3 +1,9 @@
+extern int number_of_runnable_processes_in_edf_queue; //additional
+extern int number_of_runnable_multilevel_feedback_queue[2]; //additional
+void aging_mechanism(); //additional
+
+
+
 // Per-CPU state
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -8,6 +14,7 @@ struct cpu {
   int ncli;                    // Depth of pushcli nesting.
   int intena;                  // Were interrupts enabled before pushcli?
   struct proc *proc;           // The process running on this cpu or null
+  int time_for_roundrobin; //additional
 };
 
 extern struct cpu cpus[NCPU];
@@ -33,6 +40,7 @@ struct context {
 };
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+enum class_and_level {WITHOUT_PRIORITY,EARLIEST_DEADLINE_FIRST,MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL,MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL};
 
 // Per-process state
 struct proc {
@@ -49,6 +57,11 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  enum class_and_level cal; //additional
+  int entering_time_to_the_fcfs_queue; //additional
+  int waiting_time; //additional
+  int arrival_time_to_system; //additional
+  int deadline; //additional
 };
 
 
