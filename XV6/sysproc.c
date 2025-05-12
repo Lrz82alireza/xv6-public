@@ -185,3 +185,23 @@ sys_create_realtime_process(void) //additional
     return -1;
   return create_realtime_process(decided_deadline);
 }
+
+int
+sys_change_process_queue(void) 
+{
+  int pid_of_target_process;
+  int queue_number;
+  if(argint(0,&pid_of_target_process)<0)
+    return -1;
+  if(argint(1,&queue_number)<0)
+    return -1;
+
+  return change_process_queue(pid_of_target_process,queue_number);
+}
+
+int
+sys_print_process_info(void) 
+{
+  print_process_info();
+  return 0;
+}

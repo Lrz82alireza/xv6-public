@@ -37,8 +37,9 @@ SYSCALL(make_user)
 SYSCALL(login)
 SYSCALL(logout)
 SYSCALL(logs)
-
 SYSCALL(diff)
 
 SYSCALL(create_realtime_process)
+SYSCALL(change_process_queue)
+SYSCALL(print_process_info)
 

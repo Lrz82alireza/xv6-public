@@ -132,8 +132,10 @@ int             logs(void);
 
 int             diff(const char *file1, const char *file2);
 
-
+//process scheduling
 int             create_realtime_process(int);
+int             change_process_queue(int pid, int queue);
+void            print_process_info(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

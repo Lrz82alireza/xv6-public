@@ -13,6 +13,20 @@
 int number_of_runnable_processes_in_edf_queue=0; //additional
 int number_of_runnable_multilevel_feedback_queue[2]={0,0}; //additional
 
+const char *states[] = {
+  "UNUSED", "EMBRYO", "SLEEPING", "RUNNABLE", "RUNNING", "ZOMBIE"
+};
+const char *scheduling_classes[] = {
+  [EARLIEST_DEADLINE_FIRST] = "real-time",
+  [MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL] = "normal",
+  [MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL] = "normal"
+};
+const char *scheduling_algorithms[] = {
+  [EARLIEST_DEADLINE_FIRST] = "EDF",
+  [MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL] = "mlfq(RR)",
+  [MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL] = "mlfq(FCFS)"
+};
+
 extern struct user *curr_user;
 extern struct spinlock login_lock;
 
@@ -383,8 +397,8 @@ earliest_deadline_first_scheduler() //additional
       {
         lowest_remainder_time_to_deadline=remainder_time_to_deadline;
         edf_process_to_schedule=p;
-        cprintf("pid edf is:\t%d\t",edf_process_to_schedule->pid);
-        cprintf("name of edf program:\t%s\n",edf_process_to_schedule->name);
+        // cprintf("pid edf is:\t%d\t",edf_process_to_schedule->pid);
+        // cprintf("name of edf program:\t%s\n",edf_process_to_schedule->name);
       }
     }
   }
@@ -412,8 +426,8 @@ multilevel_feedback_queue_scheduler(struct proc* last_scheduled_process_in_multi
       if(first_level_process->state==RUNNABLE && first_level_process->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
       {
         //cprintf("%s\n",first_level_process->name);
-        cprintf("rr proc name is:\t%s\t",first_level_process->name);
-        cprintf("%d\n",first_level_process->pid);
+        // cprintf("rr proc name is:\t%s\t",first_level_process->name);
+        // cprintf("%d\n",first_level_process->pid);
         return first_level_process;
       }
     }
@@ -884,7 +898,7 @@ aging_mechanism() //additional
         number_of_runnable_multilevel_feedback_queue[1]--;
         number_of_runnable_multilevel_feedback_queue[0]++;
         p->waiting_time=0;
-        cprintf("pid %d: Queue 2 to 1\n",p->pid);
+        // cprintf("pid %d: Queue 2 to 1\n",p->pid);
       }
     }
   }
@@ -906,4 +920,110 @@ create_realtime_process(int decided_deadline) //additional
   number_of_runnable_processes_in_edf_queue++;
   release(&ptable.lock);
   return 0;
+}
+
+struct proc*
+get_proc_by_pid(int pid)
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->pid == pid && p->state != UNUSED)
+      return p;
+  }
+  return 0;
+}
+
+
+int
+change_process_queue(int pid, int new_queue_type)
+{
+  acquire(&ptable.lock);
+
+  if(new_queue_type != MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL && new_queue_type != MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) {
+    cprintf("Error: invalid queue type\n");
+    release(&ptable.lock);
+    return -1;
+  }
+
+  struct proc *p = get_proc_by_pid(pid);
+  if(p == 0){
+    cprintf("Error: no process found with pid %d\n", pid);
+    release(&ptable.lock);
+    return -1;
+  }
+
+  if(p->cal == new_queue_type) {
+    cprintf("Error: process %d is already in the specified queue\n", pid , states[p->state]);
+    release(&ptable.lock);
+    return -1;
+  }
+  if(p->state == RUNNING) 
+      p->state = RUNNABLE;
+
+  if(new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL) {
+    if(p->state == RUNNABLE){
+      number_of_runnable_multilevel_feedback_queue[1]--;
+      number_of_runnable_multilevel_feedback_queue[0]++;
+    }
+      p->cal = MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL;
+    }
+    else {
+      if(p->state == RUNNABLE){
+        number_of_runnable_multilevel_feedback_queue[0]--;
+        number_of_runnable_multilevel_feedback_queue[1]++;
+      }
+      p->cal = MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL;
+      p->entering_time_to_the_fcfs_queue = ticks;
+    }
+    p->waiting_time=0; 
+  release(&ptable.lock);
+  return 0;
+}
+
+void
+print_process_info(void)
+{
+  struct proc *p;
+  
+
+  acquire(&ptable.lock);
+
+  cprintf("name           pid     state     class     algorithm    wait time     deadline         run     arrival\n");
+  cprintf("------------------------------------------------------------------------------------------------------\n");
+  
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->state != UNUSED) {
+      cprintf("%s", p->name);
+      int name_len = strlen(p->name);
+      for (int i = name_len; i < 16; i++) cprintf(" ");
+  
+      cprintf("%d", p->pid);
+      if (p->pid < 10) cprintf("      ");
+      else if (p->pid < 100) cprintf("     ");
+      else if (p->pid < 1000) cprintf("    ");
+      else cprintf("   ");
+  
+      cprintf("%s", states[p->state]);
+      int state_len = strlen(states[p->state]);
+      for (int i = state_len; i < 10; i++) cprintf(" ");
+  
+      cprintf("%s", scheduling_classes[p->cal]);
+      int class_len = strlen(scheduling_classes[p->cal]);
+      for (int i = class_len; i < 10; i++) cprintf(" ");
+  
+      cprintf("%s", scheduling_algorithms[p->cal]);
+      int algo_len = strlen(scheduling_algorithms[p->cal]);
+      for (int i = algo_len; i < 15; i++) cprintf(" ");
+  
+      cprintf("%d\t\t%d\t\t%d\t%d\n",
+              p->waiting_time,
+              (p->cal == EARLIEST_DEADLINE_FIRST ? p->deadline : 0),
+              (p->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL ? mycpu()->time_for_roundrobin : 0),
+              (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL ? p->entering_time_to_the_fcfs_queue : p->arrival_time_to_system)
+      );
+    }
+  }
+      
+  
+  release(&ptable.lock);
 }

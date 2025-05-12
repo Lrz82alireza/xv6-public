@@ -31,11 +31,12 @@ int make_user(int user_id, const char* password);
 int login(int user_id, const char* password);
 int logout();
 int logs();
-
 int diff(const char* file1, const char* file2);
 
 
 int create_realtime_process(int);
+int change_process_queue(int pid, int queue);
+int print_process_info(void);
 
 // ulib.c
 int stat(const char*, struct stat*);

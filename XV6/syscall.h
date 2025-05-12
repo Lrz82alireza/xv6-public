@@ -35,3 +35,5 @@
 
 
 #define SYS_create_realtime_process 30 //additional
+#define SYS_change_process_queue 31
+#define SYS_print_process_info 32
