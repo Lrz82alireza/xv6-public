@@ -174,3 +174,14 @@ sys_get_system_time(void)
   cmostime(current_time);
   return 0;
 }
+
+
+
+int
+sys_create_realtime_process(void) //additional
+{
+  int decided_deadline,pid_of_target_process;
+  if(argint(0,&decided_deadline)<0)
+    return -1;
+  return create_realtime_process(decided_deadline);
+}

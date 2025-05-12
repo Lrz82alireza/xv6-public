@@ -132,6 +132,9 @@ int             logs(void);
 
 int             diff(const char *file1, const char *file2);
 
+
+int             create_realtime_process(int);
+
 // swtch.S
 void            swtch(struct context**, struct context*);
 

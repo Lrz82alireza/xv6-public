@@ -51,6 +51,9 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
+      if(myproc() && myproc()->state==RUNNING && myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL) //additional
+        mycpu()->time_for_roundrobin++; //additional
+      aging_mechanism(); //additional
       wakeup(&ticks);
       release(&tickslock);
     }
@@ -102,7 +105,13 @@ trap(struct trapframe *tf)
 
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
-  if(myproc() && myproc()->state == RUNNING &&
+  if(myproc() && myproc()->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER && myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL &&
+    mycpu()->time_for_roundrobin==3) //additional
+  {
+    mycpu()->time_for_roundrobin=0;
+    yield();
+  }
+  else if(myproc() && myproc()->state == RUNNING &&
      tf->trapno == T_IRQ0+IRQ_TIMER)
     yield();
 

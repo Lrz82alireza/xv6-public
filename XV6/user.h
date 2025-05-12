@@ -34,6 +34,9 @@ int logs();
 
 int diff(const char* file1, const char* file2);
 
+
+int create_realtime_process(int);
+
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);

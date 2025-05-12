@@ -116,6 +116,9 @@ extern int  sys_logs(void);
 // diff
 extern int sys_diff(void);
 
+
+extern int sys_create_realtime_process(void); //additional
+
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,
@@ -149,6 +152,9 @@ static int (*syscalls[])(void) = {
 
 // diff
 [SYS_diff] sys_diff,
+
+
+[SYS_create_realtime_process] sys_create_realtime_process, //additional
 
 };
 

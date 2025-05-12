@@ -9,6 +9,10 @@
 
 #include "user_mgmt.h" 
 
+
+int number_of_runnable_processes_in_edf_queue=0; //additional
+int number_of_runnable_multilevel_feedback_queue[2]={0,0}; //additional
+
 extern struct user *curr_user;
 extern struct spinlock login_lock;
 
@@ -93,6 +97,8 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->waiting_time=0; //-1 to show it doesnt belong here additional
+  p->arrival_time_to_system=ticks; //additional
 
   release(&ptable.lock);
 
@@ -154,6 +160,8 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
+  p->cal=MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL; //additional
+  number_of_runnable_multilevel_feedback_queue[0]++; //additional
 
   release(&ptable.lock);
 }
@@ -220,6 +228,17 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+  if(curproc==initproc || (strlen(np->name)==2 && strncmp(np->name, "sh", 2) == 0)) //additional
+  {
+    np->cal=MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL; //additional
+    number_of_runnable_multilevel_feedback_queue[0]++; //additional
+  }
+  else 
+  {
+    np->cal=MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL; //additional
+    number_of_runnable_multilevel_feedback_queue[1]++; //additional
+    np->entering_time_to_the_fcfs_queue=ticks;
+  }
 
   release(&ptable.lock);
 
@@ -261,6 +280,21 @@ exit(void)
   // ///////////////////////////////////////////////////////
 
   acquire(&ptable.lock);
+
+  if(curproc->cal==EARLIEST_DEADLINE_FIRST) //additional
+    number_of_runnable_processes_in_edf_queue--; //additional
+  else if(curproc->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL) //additiona;
+    number_of_runnable_multilevel_feedback_queue[0]--; //additional
+  else if(curproc->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) //additional
+  {
+    number_of_runnable_multilevel_feedback_queue[1]--; //additional
+    curproc->entering_time_to_the_fcfs_queue=-1;
+    curproc->waiting_time=0; //additional
+  }
+
+
+
+
 
   // Parent might be sleeping in wait().
   wakeup1(curproc->parent);
@@ -324,6 +358,112 @@ wait(void)
   }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+struct proc*
+earliest_deadline_first_scheduler() //additional
+{
+  struct proc* edf_process_to_schedule=0;
+  int lowest_remainder_time_to_deadline=0x7fffffff;
+  for(struct proc* p=&ptable.proc[0];p<&ptable.proc[NPROC];p++)
+  {
+    if(p->cal==EARLIEST_DEADLINE_FIRST)
+    {
+      int remainder_time_to_deadline=p->deadline-ticks;
+      if(remainder_time_to_deadline<=lowest_remainder_time_to_deadline)
+      {
+        lowest_remainder_time_to_deadline=remainder_time_to_deadline;
+        edf_process_to_schedule=p;
+        cprintf("pid edf is:\t%d\t",edf_process_to_schedule->pid);
+        cprintf("name of edf program:\t%s\n",edf_process_to_schedule->name);
+      }
+    }
+  }
+  
+  return edf_process_to_schedule;
+}
+
+
+
+
+
+
+
+struct proc*
+multilevel_feedback_queue_scheduler(struct proc* last_scheduled_process_in_multilevel_feedback_queue_first_level) // additional
+{
+  if(number_of_runnable_multilevel_feedback_queue[0]!=0)
+  {
+    struct proc* first_level_process=last_scheduled_process_in_multilevel_feedback_queue_first_level;
+    for(;;)
+    {
+      first_level_process++;
+      if(first_level_process>=&ptable.proc[NPROC])
+        first_level_process=&ptable.proc[0];
+      if(first_level_process->state==RUNNABLE && first_level_process->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
+      {
+        //cprintf("%s\n",first_level_process->name);
+        cprintf("rr proc name is:\t%s\t",first_level_process->name);
+        cprintf("%d\n",first_level_process->pid);
+        return first_level_process;
+      }
+    }
+  }
+  else if(number_of_runnable_multilevel_feedback_queue[1]!=0)
+  {
+    int min_arrival_time=ticks;
+    struct proc* chosen_fcfs=0;
+    for(struct proc* second_level_process=&ptable.proc[0];second_level_process<&ptable.proc[NPROC];second_level_process++)
+    {
+      if(second_level_process->state==RUNNABLE && second_level_process->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL)
+      {
+        if(second_level_process->entering_time_to_the_fcfs_queue<=min_arrival_time && second_level_process->entering_time_to_the_fcfs_queue!=-1)
+        {
+          min_arrival_time=second_level_process->entering_time_to_the_fcfs_queue;
+          chosen_fcfs=second_level_process;
+        }
+        // if(strncmp(second_level_process->name,"init",4)==0)
+        // printf("%d\n",second_level_process->cal==WITHOUT_PRIORITY);
+        // cprintf("%s\n",second_level_process->name);
+        // cprintf("%d\n",second_level_process->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL);
+      }
+      
+      //cprintf("%s\n",second_level_process->name);
+    }
+    // cprintf("%s\n",chosen_fcfs->pid);
+    // cprintf("fcfs proc name is:\t%s\t",chosen_fcfs->name);
+    // cprintf("%d\n",chosen_fcfs->pid);
+    return chosen_fcfs;
+  }
+  return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -332,39 +472,53 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
-void
-scheduler(void)
+void scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  
-  for(;;){
+  struct proc *last_scheduled_process_in_multilevel_feedback_queue_first_level = &ptable.proc[0];  // additional
+
+  for (;;)
+  {
     // Enable interrupts on this processor.
     sti();
+    p=0; //additional
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
-
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+    if(number_of_runnable_processes_in_edf_queue!=0) // additional
+    {
+      p=earliest_deadline_first_scheduler(); // additional
     }
-    release(&ptable.lock);
+    else if (number_of_runnable_processes_in_edf_queue == 0 && (number_of_runnable_multilevel_feedback_queue[0] != 0 || number_of_runnable_multilevel_feedback_queue[1] != 0)) // additional
+    {
+      p=multilevel_feedback_queue_scheduler(last_scheduled_process_in_multilevel_feedback_queue_first_level);
+    }
+    if(p==0 || p->state!=RUNNABLE) // aditional
+    {
+      release(&ptable.lock); //additional
+      continue; //additional
+    } // additional
+    // cprintf("process name is:\t%s\t",p->name);
+    // cprintf("timer interrupt:\t%d\n",ticks);
 
+    // Switch to chosen process.  It is the process's job
+    // to release ptable.lock and then reacquire it
+    // before jumping back to us.
+    c->proc = p;
+    switchuvm(p);
+    p->state = RUNNING;
+
+    swtch(&(c->scheduler), p->context);
+    switchkvm();
+
+    // Process is done running for now.
+    // It should have changed its p->state before coming back.
+    c->proc = 0;
+    if(p->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
+      c->time_for_roundrobin=0;
+    release(&ptable.lock);
   }
 }
 
@@ -451,6 +605,16 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
+  if(p->cal==EARLIEST_DEADLINE_FIRST) //additional
+    number_of_runnable_processes_in_edf_queue--; //additional
+  else if(p->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL) //additional
+    number_of_runnable_multilevel_feedback_queue[0]--; //additional
+  else if(p->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) //additional
+  {
+    number_of_runnable_multilevel_feedback_queue[1]--; //additiona;
+    p->entering_time_to_the_fcfs_queue=-1; //additional
+    p->waiting_time=0; //additional
+  }
 
   sched();
 
@@ -474,7 +638,18 @@ wakeup1(void *chan)
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan)
+    {
       p->state = RUNNABLE;
+      if(p->cal==EARLIEST_DEADLINE_FIRST) //additional
+        number_of_runnable_processes_in_edf_queue++; //additional
+      else if(p->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL) //additional
+        number_of_runnable_multilevel_feedback_queue[0]++; //additional
+      else if(p->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) //additional
+      {
+        number_of_runnable_multilevel_feedback_queue[1]++; //additional
+        p->entering_time_to_the_fcfs_queue=ticks; //additional
+      }
+    }
 }
 
 // Wake up all processes sleeping on chan.
@@ -689,3 +864,46 @@ set_sleep_syscall(int input_tick)
   }
   return 0;
 } 
+
+
+
+
+
+void
+aging_mechanism() //additional
+{
+  acquire(&ptable.lock);
+  for(struct proc* p=&ptable.proc[0];p<&ptable.proc[NPROC];p++)
+  {
+    if(p->state==RUNNABLE && p->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL)
+    {
+      p->waiting_time++;
+      if(p->waiting_time==800)
+      {
+        p->cal=MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL;
+        number_of_runnable_multilevel_feedback_queue[1]--;
+        number_of_runnable_multilevel_feedback_queue[0]++;
+        p->waiting_time=0;
+        cprintf("pid %d: Queue 2 to 1\n",p->pid);
+      }
+    }
+  }
+  release(&ptable.lock);
+}
+
+
+
+int
+create_realtime_process(int decided_deadline) //additional
+{
+  acquire(&ptable.lock);
+  if(myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
+    number_of_runnable_multilevel_feedback_queue[0]--;
+  else if(myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL)
+    number_of_runnable_multilevel_feedback_queue[1]--;
+  myproc()->deadline=ticks+decided_deadline;
+  myproc()->cal=EARLIEST_DEADLINE_FIRST;
+  number_of_runnable_processes_in_edf_queue++;
+  release(&ptable.lock);
+  return 0;
+}

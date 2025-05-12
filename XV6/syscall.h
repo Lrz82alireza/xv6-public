@@ -32,3 +32,6 @@
 
 // diff
 #define SYS_diff 29
+
+
+#define SYS_create_realtime_process 30 //additional
