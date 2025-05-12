@@ -180,7 +180,7 @@ sys_get_system_time(void)
 int
 sys_create_realtime_process(void) //additional
 {
-  int decided_deadline,pid_of_target_process;
+  int decided_deadline;
   if(argint(0,&decided_deadline)<0)
     return -1;
   return create_realtime_process(decided_deadline);

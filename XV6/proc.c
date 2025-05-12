@@ -281,20 +281,19 @@ exit(void)
 
   acquire(&ptable.lock);
 
-  if(curproc->cal==EARLIEST_DEADLINE_FIRST) //additional
-    number_of_runnable_processes_in_edf_queue--; //additional
-  else if(curproc->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL) //additiona;
-    number_of_runnable_multilevel_feedback_queue[0]--; //additional
-  else if(curproc->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) //additional
+  if (curproc->state == RUNNABLE) //additional
   {
-    number_of_runnable_multilevel_feedback_queue[1]--; //additional
-    curproc->entering_time_to_the_fcfs_queue=-1;
-    curproc->waiting_time=0; //additional
+    if (curproc->cal == EARLIEST_DEADLINE_FIRST)                     // additional
+      number_of_runnable_processes_in_edf_queue--;                   // additional
+    else if (curproc->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)  // additiona;
+      number_of_runnable_multilevel_feedback_queue[0]--;             // additional
+    else if (curproc->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) // additional
+    {
+      number_of_runnable_multilevel_feedback_queue[1]--; // additional
+      curproc->entering_time_to_the_fcfs_queue = -1;
+      curproc->waiting_time = 0; // additional
+    }
   }
-
-
-
-
 
   // Parent might be sleeping in wait().
   wakeup1(curproc->parent);
@@ -376,7 +375,7 @@ earliest_deadline_first_scheduler() //additional
   int lowest_remainder_time_to_deadline=0x7fffffff;
   for(struct proc* p=&ptable.proc[0];p<&ptable.proc[NPROC];p++)
   {
-    if(p->cal==EARLIEST_DEADLINE_FIRST)
+    if(p->cal==EARLIEST_DEADLINE_FIRST && p->state==RUNNABLE)
     {
       int remainder_time_to_deadline=p->deadline-ticks;
       if(remainder_time_to_deadline<=lowest_remainder_time_to_deadline)
@@ -412,8 +411,8 @@ multilevel_feedback_queue_scheduler(struct proc* last_scheduled_process_in_multi
       if(first_level_process->state==RUNNABLE && first_level_process->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
       {
         //cprintf("%s\n",first_level_process->name);
-        cprintf("rr proc name is:\t%s\t",first_level_process->name);
-        cprintf("%d\n",first_level_process->pid);
+        // cprintf("rr proc name is:\t%s\t",first_level_process->name);
+        // cprintf("%d\n",first_level_process->pid);
         return first_level_process;
       }
     }
@@ -509,6 +508,12 @@ void scheduler(void)
     c->proc = p;
     switchuvm(p);
     p->state = RUNNING;
+    if(p->cal==EARLIEST_DEADLINE_FIRST) //additional
+      number_of_runnable_processes_in_edf_queue--; //additional
+    else if(p->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL) //additional
+      number_of_runnable_multilevel_feedback_queue[0]--; //additional
+    else if(p->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) //additional
+      number_of_runnable_multilevel_feedback_queue[1]--; //additional
 
     swtch(&(c->scheduler), p->context);
     switchkvm();
@@ -554,6 +559,12 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
+  if(myproc()->cal==EARLIEST_DEADLINE_FIRST) //additional
+    number_of_runnable_processes_in_edf_queue++; //additional
+  else if(myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL) //additional
+    number_of_runnable_multilevel_feedback_queue[0]++; //additional
+  else if(myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) //additional
+    number_of_runnable_multilevel_feedback_queue[1]++; //additional
   sched();
   release(&ptable.lock);
 }
@@ -604,17 +615,20 @@ sleep(void *chan, struct spinlock *lk)
   }
   // Go to sleep.
   p->chan = chan;
-  p->state = SLEEPING;
-  if(p->cal==EARLIEST_DEADLINE_FIRST) //additional
-    number_of_runnable_processes_in_edf_queue--; //additional
-  else if(p->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL) //additional
-    number_of_runnable_multilevel_feedback_queue[0]--; //additional
-  else if(p->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) //additional
+  if (p->state == RUNNABLE) //additional
   {
-    number_of_runnable_multilevel_feedback_queue[1]--; //additiona;
-    p->entering_time_to_the_fcfs_queue=-1; //additional
-    p->waiting_time=0; //additional
+    if (p->cal == EARLIEST_DEADLINE_FIRST)                     // additional
+      number_of_runnable_processes_in_edf_queue--;             // additional
+    else if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)  // additional
+      number_of_runnable_multilevel_feedback_queue[0]--;       // additional
+    else if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) // additional
+    {
+      number_of_runnable_multilevel_feedback_queue[1]--; // additiona;
+      p->entering_time_to_the_fcfs_queue = -1;           // additional
+      p->waiting_time = 0;                               // additional
+    }
   }
+  p->state = SLEEPING;
 
   sched();
 
@@ -897,13 +911,14 @@ int
 create_realtime_process(int decided_deadline) //additional
 {
   acquire(&ptable.lock);
-  if(myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
+  if(myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL && myproc()->state==RUNNABLE)
     number_of_runnable_multilevel_feedback_queue[0]--;
-  else if(myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL)
+  else if(myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL && myproc()->state==RUNNABLE)
     number_of_runnable_multilevel_feedback_queue[1]--;
   myproc()->deadline=ticks+decided_deadline;
   myproc()->cal=EARLIEST_DEADLINE_FIRST;
-  number_of_runnable_processes_in_edf_queue++;
+  if(myproc()->state==RUNNABLE)
+    number_of_runnable_processes_in_edf_queue++;
   release(&ptable.lock);
   return 0;
 }
