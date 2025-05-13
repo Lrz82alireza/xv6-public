@@ -62,6 +62,7 @@ struct proc {
   int waiting_time; //additional
   int arrival_time_to_system; //additional
   int deadline; //additional
+  int continous_time_to_run; //additional
 };
 
 

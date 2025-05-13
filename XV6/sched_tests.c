@@ -20,64 +20,30 @@ void delay() {
 
 int main(void)
 {
-    int pid1 = fork();
-    if(pid1 < 0) {
-        printf(1, UNABLE_TO_CREATE_PROCESS);
-        exit();
+    int pid=0;
+    for (int i = 0; i < 4; i++)
+    {
+        int pid = fork();
+        if (pid < 0)
+        {
+            printf(1, UNABLE_TO_CREATE_PROCESS);
+            exit();
+        }
+        else if (pid == 0)
+        {
+            set_sleep_syscall(200);
+            delay();
+            printf(1, "\n");
+            printf(1, "\n");
+            exit();
+        }
     }
-    else if(pid1 == 0) {
-        delay();
-        printf(1 , "\n");
+    for(int i=0;i<8;i++)
+    { 
         print_process_info();
-        printf(1 , "\n");
-        printf(1, "PID 1 Test\n");
-        exit();
-    }
-    else
         wait();
-
-    int pid2 = fork();
-    if(pid2 < 0) {
-        printf(1, UNABLE_TO_CREATE_PROCESS);
-        exit();
+        
     }
-    else if(pid2 == 0) {
-        delay();
-        change_process_queue(getpid(), MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL);
-        printf(1, "Process %d moved to MLFQ Level 1 (RR)\n", getpid());
-        delay();
-        printf(1 , "\n");
-        print_process_info();
-        printf(1 , "\n");
-        printf(1, "PID 2 Test\n");
-        exit();
-    }
-    else
-        wait();
-
-    int pid3 = fork();
-    if(pid3 < 0) {
-        printf(1, UNABLE_TO_CREATE_PROCESS);
-        exit();
-    }
-    else if(pid3 == 0) {
-        delay();
-        create_realtime_process(REAL_TIME_PROCESS_DEADLINE);
-        printf(1, "Process %d moved to EDF\n", getpid());
-        delay();
-        printf(1 , "\n");
-        print_process_info();
-        printf(1 , "\n");
-        printf(1, "PID 3 Test\n");
-        exit();
-    }
-    else
-        wait();
-   
-    delay();
-    printf(1 , "\n");
-    print_process_info();
-    printf(1 , "\n");
     printf(1, "overall test\n");
 
     
