@@ -53,6 +53,8 @@ trap(struct trapframe *tf)
       ticks++;
       if(myproc() && myproc()->state==RUNNING && myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL) //additional
         mycpu()->time_for_roundrobin++; //additional
+      if (myproc() && myproc()->state == RUNNING)
+        myproc()->continous_time_to_run++;
       aging_mechanism(); //additional
       wakeup(&ticks);
       release(&tickslock);
