@@ -17,7 +17,7 @@ void delay() {
 int main(void)
 {
     int pid=0;
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 10; i++)
     {
         int pid = fork();
         if (pid < 0)
@@ -28,13 +28,13 @@ int main(void)
         else if (pid == 0)
         {
             set_sleep_syscall(200);
-            delay();
+            //delay();
             printf(1, "\n");
             printf(1, "\n");
             exit();
         }
     }
-    for(int i=0;i<8;i++)
+    for(int i=0;i<10;i++)
     { 
         print_process_info();
         wait();
