@@ -9,6 +9,20 @@
 
 #include "user_mgmt.h" 
 
+#define MAX_PROC_INFO 64
+
+struct proc_snapshot {
+  char name[16];
+  int pid;
+  int state;
+  int cal;
+  int waiting_time;
+  int deadline;
+  int continous_time_to_run;
+  int entering_time_to_the_fcfs_queue;
+  int arrival_time_to_system;
+};
+
 
 int number_of_runnable_processes_in_edf_queue=0; //additional
 int number_of_runnable_multilevel_feedback_queue[2]={0,0}; //additional
@@ -1029,54 +1043,98 @@ change_process_queue(int pid, int new_queue_type)
   return 0;
 }
 
+int num_digits(int n) {
+  if (n == 0) return 1;
+  int count = 0;
+  if (n < 0) {
+    count++;
+    n = -n;
+  }
+  while (n > 0) {
+    count++;
+    n /= 10;
+  }
+  return count;
+}
+
+int
+collect_process_snapshots(struct proc_snapshot *list, int max_count)
+{
+  int count = 0;
+
+  acquire(&ptable.lock);
+  for (struct proc *p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->state != UNUSED && count < max_count) {
+      safestrcpy(list[count].name, p->name, sizeof(p->name));
+      list[count].pid = p->pid;
+      list[count].state = p->state;
+      list[count].cal = p->cal;
+      list[count].waiting_time = p->waiting_time;
+      list[count].deadline = p->deadline;
+      list[count].continous_time_to_run = p->continous_time_to_run;
+      list[count].entering_time_to_the_fcfs_queue = p->entering_time_to_the_fcfs_queue;
+      list[count].arrival_time_to_system = p->arrival_time_to_system;
+      count++;
+    }
+  }
+  release(&ptable.lock);
+
+  return count;
+}
+
 void
 print_process_info(void)
 {
-  struct proc *p;
+  struct proc_snapshot list[MAX_PROC_INFO];
+  int count = collect_process_snapshots(list, MAX_PROC_INFO);
   
-
-  acquire(&ptable.lock);
-
-  cprintf("name           pid     state     class     algorithm    wait time     deadline         run     arrival\n");
+  cprintf("name           pid     state     class     algorithm    wait time   deadline     run        arrival\n");
   cprintf("------------------------------------------------------------------------------------------------------\n");
+
+  for (int i = 0; i < count; i++) {
+    struct proc_snapshot *p = &list[i];
+
+    cprintf("%s", p->name);
+    int name_len = strlen(p->name);
+    for (int i = name_len; i < 16; i++) cprintf(" ");
   
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-    if (p->state != UNUSED) {
-      cprintf("%s", p->name);
-      int name_len = strlen(p->name);
-      for (int i = name_len; i < 16; i++) cprintf(" ");
+    cprintf("%d", p->pid);
+    if (p->pid < 10) cprintf("      ");
+    else if (p->pid < 100) cprintf("     ");
+    else if (p->pid < 1000) cprintf("    ");
+    else cprintf("   ");
   
-      cprintf("%d", p->pid);
-      if (p->pid < 10) cprintf("      ");
-      else if (p->pid < 100) cprintf("     ");
-      else if (p->pid < 1000) cprintf("    ");
-      else cprintf("   ");
+    cprintf("%s", states[p->state]);
+    int state_len = strlen(states[p->state]);
+    for (int i = state_len; i < 10; i++) cprintf(" ");
   
-      cprintf("%s", states[p->state]);
-      int state_len = strlen(states[p->state]);
-      for (int i = state_len; i < 10; i++) cprintf(" ");
+    cprintf("%s", scheduling_classes[p->cal]);
+    int class_len = strlen(scheduling_classes[p->cal]);
+    for (int i = class_len; i < 10; i++) cprintf(" ");
   
-      cprintf("%s", scheduling_classes[p->cal]);
-      int class_len = strlen(scheduling_classes[p->cal]);
-      for (int i = class_len; i < 10; i++) cprintf(" ");
-  
-      cprintf("%s", scheduling_algorithms[p->cal]);
-      int algo_len = strlen(scheduling_algorithms[p->cal]);
-      for (int i = algo_len; i < 15; i++) cprintf(" ");
-  
-      cprintf("%d\t\t%d\t\t%d\t%d\n",
-              p->waiting_time,
-              (p->cal == EARLIEST_DEADLINE_FIRST ? p->deadline : 0),
-              (p->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL ? p->continous_time_to_run : 0),
-              (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL ? p->entering_time_to_the_fcfs_queue : p->arrival_time_to_system)
-      );
-    }
+    cprintf("%s", scheduling_algorithms[p->cal]);
+    int algo_len = strlen(scheduling_algorithms[p->cal]);
+    for (int i = algo_len; i < 15; i++) cprintf(" ");
+
+    int wait = p->waiting_time;
+    int dl = (p->cal == EARLIEST_DEADLINE_FIRST ? p->deadline : 0);
+    int run = (p->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL ? p->continous_time_to_run : 0);
+    int arrival = (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL ? p->entering_time_to_the_fcfs_queue : p->arrival_time_to_system);
+    
+    // wait time
+    cprintf("%d", wait);
+    for (int i = 0; i < 12 - num_digits(wait); i++) cprintf(" ");
+    
+    // deadline
+    cprintf("%d", dl);
+    for (int i = 0; i < 12 - num_digits(dl); i++) cprintf(" ");
+    
+    // run
+    cprintf("%d", run);
+    for (int i = 0; i < 12 - num_digits(run); i++) cprintf(" ");
+    
+    // arrival
+    cprintf("%d\n", arrival);
   }
-  // for(struct cpu* mycpu=&cpus[0];mycpu<&cpus[NCPU];mycpu++)
-  // {
-  //   cprintf("cpu is:\t%d\t%d\n",mycpu-cpus,mycpu->proc->pid);
-  // }
-      
-  
-  release(&ptable.lock);
 }
+
