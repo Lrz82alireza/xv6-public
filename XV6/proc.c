@@ -1087,6 +1087,7 @@ print_process_info(void)
 {
   struct proc_snapshot list[MAX_PROC_INFO];
   int count = collect_process_snapshots(list, MAX_PROC_INFO);
+  acquire(&ptable.lock);
   
   cprintf("name           pid     state     class     algorithm    wait time   deadline     run        arrival\n");
   cprintf("------------------------------------------------------------------------------------------------------\n");
@@ -1136,5 +1137,6 @@ print_process_info(void)
     // arrival
     cprintf("%d\n", arrival);
   }
+  release(&ptable.lock);
 }
 
