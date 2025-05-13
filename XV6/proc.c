@@ -995,7 +995,6 @@ create_realtime_process(int decided_deadline)
   p->deadline = saved_tick + decided_deadline;
   release(&tickslock);
 
-  cprintf("PID %d: Queue 2 to 1\n",p->pid);
   
   p->arrival_time_to_system=saved_tick;
 
