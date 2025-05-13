@@ -1,7 +1,15 @@
 #include "types.h"
 #include "user.h"
+
 #define UNABLE_TO_CREATE_PROCESS "unable to create a process\n"
-enum class_and_level {WITHOUT_PRIORITY, EARLIEST_DEADLINE_FIRST, MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL, MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL};
+
+enum class_and_level {
+    WITHOUT_PRIORITY,
+    EARLIEST_DEADLINE_FIRST,
+    MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL,
+    MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL
+};
+
 int REAL_TIME_PROCESS_DEADLINE = 500; 
 
 void delay() {
@@ -16,32 +24,75 @@ void delay() {
 
 int main(void)
 {
-    int pid=0;
-    for (int i = 0; i < 10; i++)
-    {
-        int pid = fork();
-        if (pid < 0)
-        {
-            printf(1, UNABLE_TO_CREATE_PROCESS);
-            exit();
-        }
-        else if (pid == 0)
-        {
-            set_sleep_syscall(200);
-            delay();
-            printf(1, "\n");
-            printf(1, "\n");
-            exit();
-        }
-        
-    }
-    for(int i=0;i<10;i++)
-    { 
+    int pid1 = fork();
+    if (pid1 < 0) {
+        printf(1, UNABLE_TO_CREATE_PROCESS);
+        exit();
+    } else if (pid1 == 0) {
+        change_process_queue(getpid(), MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL);
+        delay();
         print_process_info();
+        delay();
+        printf(1, "Child 1: done\n");
+        exit();
+    }
+
+    int pid2 = fork();
+    if (pid2 < 0) {
+        printf(1, UNABLE_TO_CREATE_PROCESS);
+        exit();
+    } else if (pid2 == 0) {
+        change_process_queue(getpid(), MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL);
+        delay();
+        print_process_info();
+        delay();
+        printf(1, "Child 2: done\n");
+        exit();
+    }
+
+    int pid3 = fork();
+    if (pid3 < 0) {
+        printf(1, UNABLE_TO_CREATE_PROCESS);
+        exit();
+    } else if (pid3 == 0) {
+        create_realtime_process(1000);
+        delay();
+        print_process_info();
+        delay();
+        printf(1, "Child 3: done\n");
+        exit();
+    }
+
+    int pid4 = fork();
+    if (pid4 < 0) {
+        printf(1, UNABLE_TO_CREATE_PROCESS);
+        exit();
+    } else if (pid4 == 0) {
+        create_realtime_process(1000);
+        delay();
+        print_process_info();
+        delay();
+        printf(1, "Child 4: done\n");
+        exit();
+    }
+
+    int pid5 = fork();
+    if (pid5 < 0) {
+        printf(1, UNABLE_TO_CREATE_PROCESS);
+        exit();
+    } else if (pid5 == 0) {
+        change_process_queue(getpid(), MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL);
+        delay();
+        print_process_info();
+        delay();
+        printf(1, "Child 5: done\n");
+        exit();
+    }
+
+    for (int i = 0; i < 5; i++) {
         wait();
     }
-    printf(1, "overall test\n");
-    
 
+    printf(1, "Parent: All 5 child processes completed.\n");
     exit();
 }

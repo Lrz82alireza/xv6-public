@@ -11,6 +11,8 @@
 
 #define MAX_PROC_INFO 64
 
+struct spinlock print_lock;
+
 struct proc_snapshot {
   char name[16];
   int pid;
@@ -60,6 +62,7 @@ static void wakeup1(void *chan);
 void
 pinit(void)
 {
+  initlock(&print_lock , "print");
   initlock(&ptable.lock, "ptable");
 }
 
@@ -310,6 +313,21 @@ exit(void)
 
   acquire(&ptable.lock);
 
+  if (curproc->state == RUNNABLE) //additional
+  {
+    if (curproc->cal == EARLIEST_DEADLINE_FIRST)                     // additional
+      number_of_runnable_processes_in_edf_queue--;                   // additional
+    else if (curproc->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)  // additiona;
+      number_of_runnable_multilevel_feedback_queue[0]--;             // additional
+    else if (curproc->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) // additional
+    {
+      number_of_runnable_multilevel_feedback_queue[1]--; // additional
+      curproc->entering_time_to_the_fcfs_queue = -1;
+    }
+  }
+  // if(curproc->state!=RUNNING)
+  //   curproc->continous_time_to_run=0; //additional
+
 
 
   int previous_witing_time=curproc->waiting_time; //additional
@@ -333,20 +351,7 @@ exit(void)
   }
 
   // Jump into the scheduler, never to return.
-  if (curproc->state == RUNNABLE) //additional
-  {
-    if (curproc->cal == EARLIEST_DEADLINE_FIRST)                     // additional
-      number_of_runnable_processes_in_edf_queue--;                   // additional
-    else if (curproc->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)  // additiona;
-      number_of_runnable_multilevel_feedback_queue[0]--;             // additional
-    else if (curproc->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) // additional
-    {
-      number_of_runnable_multilevel_feedback_queue[1]--; // additional
-      curproc->entering_time_to_the_fcfs_queue = -1;
-    }
-  }
   curproc->state = ZOMBIE;
-  
   sched();
   panic("zombie exit");
 }
@@ -952,30 +957,49 @@ aging_mechanism() //additional
         number_of_runnable_multilevel_feedback_queue[1]--;
         number_of_runnable_multilevel_feedback_queue[0]++;
         p->waiting_time=0;
-        cprintf("pid %d: Queue 2 to 1\n",p->pid);
+        //cprintf("pid %d: Queue 2 to 1\n",p->pid);
       }
     }
   }
+  // for (struct cpu *c = cpus; c < &cpus[NCPU]; c++)
+  // {
+  //   struct proc *p = c->proc;
+  //   if (p && p->state == RUNNING)
+  //     p->continous_time_to_run++;
+  // }
   release(&ptable.lock);
 }
 
 
 
 int
-create_realtime_process(int decided_deadline) //additional
+create_realtime_process(int decided_deadline)
 {
+  struct proc* p = myproc();
+
   acquire(&ptable.lock);
-  if(myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL && myproc()->state==RUNNABLE)
-    number_of_runnable_multilevel_feedback_queue[0]--;
-  else if(myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL && myproc()->state==RUNNABLE)
-    number_of_runnable_multilevel_feedback_queue[1]--;
-  myproc()->deadline=ticks+decided_deadline;
-  myproc()->cal=EARLIEST_DEADLINE_FIRST;
-  if(myproc()->state==RUNNABLE)
+
+  if (p->state == RUNNABLE) {
+    if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
+      number_of_runnable_multilevel_feedback_queue[0]--;
+    else if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL)
+      number_of_runnable_multilevel_feedback_queue[1]--;
+  }
+
+  acquire(&tickslock);
+  p->deadline = ticks + decided_deadline;
+  release(&tickslock);
+
+  p->cal = EARLIEST_DEADLINE_FIRST;
+
+  if (p->state == RUNNABLE)
     number_of_runnable_processes_in_edf_queue++;
+
   release(&ptable.lock);
   return 0;
 }
+
+
 
 struct proc*
 get_proc_by_pid(int pid)
@@ -992,48 +1016,68 @@ get_proc_by_pid(int pid)
 int
 change_process_queue(int pid, int new_queue_type)
 {
-  acquire(&ptable.lock);
+struct proc *p;
+int result = 0;
+int saved_ticks = 0;
 
-  if(new_queue_type != MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL && new_queue_type != MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) {
-    cprintf("Error: invalid queue type\n");
-    release(&ptable.lock);
-    return -1;
-  }
+acquire(&ptable.lock);
 
-  struct proc *p = get_proc_by_pid(pid);
-  if(p == 0){
-    cprintf("Error: no process found with pid %d\n", pid);
-    release(&ptable.lock);
-    return -1;
-  }
-
-  if(p->cal == new_queue_type) {
-    cprintf("Error: process %d is already in the specified queue\n", pid , states[p->state]);
-    release(&ptable.lock);
-    return -1;
-  }
-  if(p->state == RUNNING) 
-      p->state = RUNNABLE;
-
-  if(new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL) {
-    if(p->state == RUNNABLE){
-      number_of_runnable_multilevel_feedback_queue[1]--;
-      number_of_runnable_multilevel_feedback_queue[0]++;
-    }
-      p->cal = MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL;
-    }
-    else {
-      if(p->state == RUNNABLE){
-        number_of_runnable_multilevel_feedback_queue[0]--;
-        number_of_runnable_multilevel_feedback_queue[1]++;
-      }
-      p->cal = MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL;
-      p->entering_time_to_the_fcfs_queue = ticks;
-    }
-    p->waiting_time=0; 
-  release(&ptable.lock);
-  return 0;
+if (new_queue_type != MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL &&
+new_queue_type != MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) {
+release(&ptable.lock);
+cprintf("Error: invalid queue type\n");
+return -1;
 }
+
+p = get_proc_by_pid(pid);
+if (p == 0) {
+release(&ptable.lock);
+cprintf("Error: no process found with pid %d\n", pid);
+return -1;
+}
+
+if (p->cal == new_queue_type) {
+release(&ptable.lock);
+cprintf("Error: process %d is already in the specified queue\n", pid);
+return -1;
+}
+
+// از تغییر دادن RUNNING جلوگیری کن
+if (p->state == RUNNING && p != myproc()) {
+release(&ptable.lock);
+cprintf("Error: Cannot move RUNNING process from another CPU\n");
+return -1;
+}
+
+if (p->state == RUNNABLE) {
+if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
+number_of_runnable_multilevel_feedback_queue[0]--;
+else if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL)
+number_of_runnable_multilevel_feedback_queue[1]--;
+}
+
+p->cal = new_queue_type;
+if (p->state == RUNNABLE) {
+if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
+number_of_runnable_multilevel_feedback_queue[0]++;
+else
+number_of_runnable_multilevel_feedback_queue[1]++;
+}
+
+if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) {
+acquire(&tickslock);
+saved_ticks = ticks;
+release(&tickslock);
+p->entering_time_to_the_fcfs_queue = saved_ticks;
+}
+
+p->waiting_time = 0;
+release(&ptable.lock);
+
+return 0;
+}
+
+
 
 int num_digits(int n) {
   if (n == 0) return 1;
@@ -1077,9 +1121,9 @@ collect_process_snapshots(struct proc_snapshot *list, int max_count)
 void
 print_process_info(void)
 {
+  acquire(&print_lock);
   struct proc_snapshot list[MAX_PROC_INFO];
   int count = collect_process_snapshots(list, MAX_PROC_INFO);
-  
   
   cprintf("name           pid     state     class     algorithm    wait time   deadline     run        arrival\n");
   cprintf("------------------------------------------------------------------------------------------------------\n");
@@ -1129,5 +1173,6 @@ print_process_info(void)
     // arrival
     cprintf("%d\n", arrival);
   }
+  release(&print_lock);
 }
 
