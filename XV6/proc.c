@@ -1016,65 +1016,64 @@ get_proc_by_pid(int pid)
 int
 change_process_queue(int pid, int new_queue_type)
 {
-struct proc *p;
-int result = 0;
-int saved_ticks = 0;
+  struct proc *p;
+  int result = 0;
+  int saved_ticks = 0;
 
-acquire(&ptable.lock);
+  acquire(&ptable.lock);
 
-if (new_queue_type != MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL &&
-new_queue_type != MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) {
-release(&ptable.lock);
-cprintf("Error: invalid queue type\n");
-return -1;
-}
+  if (new_queue_type != MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL &&
+  new_queue_type != MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) {
+    release(&ptable.lock);
+    cprintf("Error: invalid queue type\n");
+    return -1;
+  }
 
-p = get_proc_by_pid(pid);
-if (p == 0) {
-release(&ptable.lock);
-cprintf("Error: no process found with pid %d\n", pid);
-return -1;
-}
+  p = get_proc_by_pid(pid);
+  if (p == 0) {
+    release(&ptable.lock);
+    cprintf("Error: no process found with pid %d\n", pid);
+    return -1;
+  }
 
-if (p->cal == new_queue_type) {
-release(&ptable.lock);
-cprintf("Error: process %d is already in the specified queue\n", pid);
-return -1;
-}
+  if (p->cal == new_queue_type) {
+    release(&ptable.lock);
+    cprintf("Error: process %d is already in the specified queue\n", pid);
+    return -1;
+  }
 
-// از تغییر دادن RUNNING جلوگیری کن
-if (p->state == RUNNING && p != myproc()) {
-release(&ptable.lock);
-cprintf("Error: Cannot move RUNNING process from another CPU\n");
-return -1;
-}
+  if (p->state == RUNNING && p != myproc()) {
+    release(&ptable.lock);
+    cprintf("Error: Cannot move RUNNING process from another CPU\n");
+    return -1;
+  }
 
-if (p->state == RUNNABLE) {
-if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
-number_of_runnable_multilevel_feedback_queue[0]--;
-else if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL)
-number_of_runnable_multilevel_feedback_queue[1]--;
-}
+  if (p->state == RUNNABLE) {
+  if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
+  number_of_runnable_multilevel_feedback_queue[0]--;
+  else if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL)
+  number_of_runnable_multilevel_feedback_queue[1]--;
+  }
 
-p->cal = new_queue_type;
-if (p->state == RUNNABLE) {
-if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
-number_of_runnable_multilevel_feedback_queue[0]++;
-else
-number_of_runnable_multilevel_feedback_queue[1]++;
-}
+  p->cal = new_queue_type;
+  if (p->state == RUNNABLE) {
+  if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
+  number_of_runnable_multilevel_feedback_queue[0]++;
+  else
+  number_of_runnable_multilevel_feedback_queue[1]++;
+  }
 
-if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) {
-acquire(&tickslock);
-saved_ticks = ticks;
-release(&tickslock);
-p->entering_time_to_the_fcfs_queue = saved_ticks;
-}
+  if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) {
+  acquire(&tickslock);
+  saved_ticks = ticks;
+  release(&tickslock);
+  p->entering_time_to_the_fcfs_queue = saved_ticks;
+  }
 
-p->waiting_time = 0;
-release(&ptable.lock);
-
-return 0;
+  p->waiting_time = 0;
+  release(&ptable.lock);
+  
+  return 0;
 }
 
 
