@@ -6,10 +6,10 @@ int REAL_TIME_PROCESS_DEADLINE = 500;
 
 void delay() {
     volatile int i, j;
-    int slices = 50;
+    int slices = 10000;
     for(i = 0; i < slices; i++) {
         for(j = 0; j < 5000; j++) {
-            asm("nop");
+            continue;
         }
     }
 }
@@ -33,6 +33,7 @@ int main(void)
             printf(1, "\n");
             exit();
         }
+        
     }
     for(int i=0;i<10;i++)
     { 

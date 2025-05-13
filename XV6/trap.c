@@ -110,6 +110,8 @@ trap(struct trapframe *tf)
   if(myproc() && myproc()->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER && myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL &&
     mycpu()->time_for_roundrobin==3) //additional
   {
+    if(myproc()->cal==MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
+      myproc()->continous_time_to_run=0;
     mycpu()->time_for_roundrobin=0;
     yield();
   }

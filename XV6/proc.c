@@ -312,21 +312,6 @@ exit(void)
 
   acquire(&ptable.lock);
 
-  if (curproc->state == RUNNABLE) //additional
-  {
-    if (curproc->cal == EARLIEST_DEADLINE_FIRST)                     // additional
-      number_of_runnable_processes_in_edf_queue--;                   // additional
-    else if (curproc->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)  // additiona;
-      number_of_runnable_multilevel_feedback_queue[0]--;             // additional
-    else if (curproc->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) // additional
-    {
-      number_of_runnable_multilevel_feedback_queue[1]--; // additional
-      curproc->entering_time_to_the_fcfs_queue = -1;
-    }
-  }
-  // if(curproc->state!=RUNNING)
-  //   curproc->continous_time_to_run=0; //additional
-
 
 
   int previous_witing_time=curproc->waiting_time; //additional
@@ -350,7 +335,20 @@ exit(void)
   }
 
   // Jump into the scheduler, never to return.
+  if (curproc->state == RUNNABLE) //additional
+  {
+    if (curproc->cal == EARLIEST_DEADLINE_FIRST)                     // additional
+      number_of_runnable_processes_in_edf_queue--;                   // additional
+    else if (curproc->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)  // additiona;
+      number_of_runnable_multilevel_feedback_queue[0]--;             // additional
+    else if (curproc->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) // additional
+    {
+      number_of_runnable_multilevel_feedback_queue[1]--; // additional
+      curproc->entering_time_to_the_fcfs_queue = -1;
+    }
+  }
   curproc->state = ZOMBIE;
+  
   sched();
   panic("zombie exit");
 }
@@ -956,16 +954,10 @@ aging_mechanism() //additional
         number_of_runnable_multilevel_feedback_queue[1]--;
         number_of_runnable_multilevel_feedback_queue[0]++;
         p->waiting_time=0;
-        //cprintf("pid %d: Queue 2 to 1\n",p->pid);
+        cprintf("pid %d: Queue 2 to 1\n",p->pid);
       }
     }
   }
-  // for (struct cpu *c = cpus; c < &cpus[NCPU]; c++)
-  // {
-  //   struct proc *p = c->proc;
-  //   if (p && p->state == RUNNING)
-  //     p->continous_time_to_run++;
-  // }
   release(&ptable.lock);
 }
 
