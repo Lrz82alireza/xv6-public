@@ -28,7 +28,7 @@ int main(void)
         else if (pid == 0)
         {
             set_sleep_syscall(200);
-            //delay();
+            delay();
             printf(1, "\n");
             printf(1, "\n");
             exit();
