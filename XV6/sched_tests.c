@@ -11,11 +11,7 @@ void delay() {
         for(j = 0; j < 5000; j++) {
             asm("nop");
         }
-        if (i % 10 == 0) {
-            printf(1, ".");
-        }
     }
-    printf(1, "\n");
 }
 
 int main(void)
@@ -42,12 +38,8 @@ int main(void)
     { 
         print_process_info();
         wait();
-        
     }
     printf(1, "overall test\n");
-
-    
-    
     
 
     exit();
