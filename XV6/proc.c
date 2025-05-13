@@ -193,6 +193,7 @@ userinit(void)
 
   p->state = RUNNABLE;
   p->cal=MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL; //additional
+  p->arrival_time_to_system=ticks;
   number_of_runnable_multilevel_feedback_queue[0]++; //additional
 
   release(&ptable.lock);
@@ -264,12 +265,14 @@ fork(void)
   {
     np->cal=MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL; //additional
     number_of_runnable_multilevel_feedback_queue[0]++; //additional
+    np->arrival_time_to_system=ticks;
   }
   else 
   {
     np->cal=MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL; //additional
     number_of_runnable_multilevel_feedback_queue[1]++; //additional
     np->entering_time_to_the_fcfs_queue=ticks;
+    np->arrival_time_to_system=ticks;
   }
 
   release(&ptable.lock);
@@ -957,7 +960,7 @@ aging_mechanism() //additional
         number_of_runnable_multilevel_feedback_queue[1]--;
         number_of_runnable_multilevel_feedback_queue[0]++;
         p->waiting_time=0;
-        //cprintf("pid %d: Queue 2 to 1\n",p->pid);
+        p->arrival_time_to_system=ticks;
       }
     }
   }
@@ -985,10 +988,18 @@ create_realtime_process(int decided_deadline)
     else if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL)
       number_of_runnable_multilevel_feedback_queue[1]--;
   }
+  int saved_tick=0;
 
   acquire(&tickslock);
-  p->deadline = ticks + decided_deadline;
+  saved_tick=ticks;
+  p->deadline = saved_tick + decided_deadline;
   release(&tickslock);
+
+  cprintf("PID %d: Queue 2 to 1\n",p->pid);
+  
+  p->arrival_time_to_system=saved_tick;
+
+
 
   p->cal = EARLIEST_DEADLINE_FIRST;
 
@@ -1068,6 +1079,7 @@ change_process_queue(int pid, int new_queue_type)
   saved_ticks = ticks;
   release(&tickslock);
   p->entering_time_to_the_fcfs_queue = saved_ticks;
+  p->arrival_time_to_system=saved_ticks;
   }
 
   p->waiting_time = 0;
@@ -1120,6 +1132,7 @@ collect_process_snapshots(struct proc_snapshot *list, int max_count)
 void
 print_process_info(void)
 {
+  cli();
   acquire(&print_lock);
   struct proc_snapshot list[MAX_PROC_INFO];
   int count = collect_process_snapshots(list, MAX_PROC_INFO);
@@ -1154,7 +1167,7 @@ print_process_info(void)
 
     int wait = p->waiting_time;
     int dl = (p->cal == EARLIEST_DEADLINE_FIRST ? p->deadline : 0);
-    int run = (p->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL ? p->continous_time_to_run : 0);
+    int run = p->continous_time_to_run;
     int arrival = (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL ? p->entering_time_to_the_fcfs_queue : p->arrival_time_to_system);
     
     // wait time
@@ -1173,5 +1186,6 @@ print_process_info(void)
     cprintf("%d\n", arrival);
   }
   release(&print_lock);
+  sti();
 }
 

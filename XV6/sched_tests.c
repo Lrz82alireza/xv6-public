@@ -33,7 +33,7 @@ int main(void)
         delay();
         print_process_info();
         delay();
-        printf(1, "Child 1: done\n");
+        //printf(1, "Child 1: done\n");
         exit();
     }
 
@@ -46,20 +46,20 @@ int main(void)
         delay();
         print_process_info();
         delay();
-        printf(1, "Child 2: done\n");
+        //printf(1, "Child 2: done\n");
         exit();
     }
 
     int pid3 = fork();
     if (pid3 < 0) {
-        printf(1, UNABLE_TO_CREATE_PROCESS);
+        //printf(1, UNABLE_TO_CREATE_PROCESS);
         exit();
     } else if (pid3 == 0) {
         create_realtime_process(1000);
         delay();
         print_process_info();
         delay();
-        printf(1, "Child 3: done\n");
+        //printf(1, "Child 3: done\n");
         exit();
     }
 
@@ -72,7 +72,7 @@ int main(void)
         delay();
         print_process_info();
         delay();
-        printf(1, "Child 4: done\n");
+        //printf(1, "Child 4: done\n");
         exit();
     }
 
@@ -83,9 +83,8 @@ int main(void)
     } else if (pid5 == 0) {
         change_process_queue(getpid(), MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL);
         delay();
-        print_process_info();
         delay();
-        printf(1, "Child 5: done\n");
+        //printf(1, "Child 5: done\n");
         exit();
     }
 
@@ -93,6 +92,6 @@ int main(void)
         wait();
     }
 
-    printf(1, "Parent: All 5 child processes completed.\n");
+    //printf(1, "Parent: All 5 child processes completed.\n");
     exit();
 }

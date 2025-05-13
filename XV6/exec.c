@@ -94,8 +94,9 @@ exec(char *path, char **argv)
   safestrcpy(curproc->name, last, sizeof(curproc->name));
   if(strlen(curproc->parent->name)== 2 && strncmp(curproc->parent->name,"sh",2)==0)
   {
-    cprintf("pid is:\t\n",curproc->pid);
     curproc->cal=MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL;
+    curproc->arrival_time_to_system=ticks;
+    curproc->entering_time_to_the_fcfs_queue=ticks;
     if(curproc->state==RUNNABLE)
     {
       number_of_runnable_multilevel_feedback_queue[0]--;
