@@ -10,8 +10,6 @@
 #include "user_mgmt.h" 
 
 #define MAX_PROC_INFO 64
-#define BUF_SIZE 4096
-
 
 struct proc_snapshot {
   char name[16];
@@ -1084,103 +1082,60 @@ collect_process_snapshots(struct proc_snapshot *list, int max_count)
   return count;
 }
 
-
-void
-append(char *buf, int *offset, const char *s) {
-  while (*s && *offset < BUF_SIZE - 1)
-    buf[(*offset)++] = *s++;
-  buf[*offset] = '\0';
-}
-
-void
-append_spaces(char *buf, int *offset, int count) {
-  for (int i = 0; i < count && *offset < BUF_SIZE - 1; i++)
-    buf[(*offset)++] = ' ';
-  buf[*offset] = '\0';
-}
-
-int
-int_to_str(int x, char *out) {
-  if (x == 0) {
-    out[0] = '0';
-    out[1] = '\0';
-    return 1;
-  }
-  int i = 0, neg = 0;
-  if (x < 0) {
-    neg = 1;
-    x = -x;
-  }
-  char tmp[16];
-  while (x > 0) {
-    tmp[i++] = '0' + x % 10;
-    x /= 10;
-  }
-  int j = 0;
-  if (neg) out[j++] = '-';
-  while (i--) out[j++] = tmp[i];
-  out[j] = '\0';
-  return j;
-}
-
-void
-pad_and_append(char *buf, int *offset, const char *s, int total_width) {
-  int len = strlen(s);
-  append(buf, offset, s);
-  if (total_width > len)
-    append_spaces(buf, offset, total_width - len);
-}
-
-void
-pad_and_append_int(char *buf, int *offset, int val, int total_width) {
-  char tmp[16];
-  int len = int_to_str(val, tmp);
-  append(buf, offset, tmp);
-  if (total_width > len)
-    append_spaces(buf, offset, total_width - len);
-}
-
-/*
- * Prints information about all processes in the system.
- * The information includes the process name, PID, state, class, scheduling algorithm,
- * waiting time, deadline, continuous run time, and arrival time.
- * This information is collected from the proc_snapshot list and formatted into a buffer
- * that is then printed to the console.
- */
-
 void
 print_process_info(void)
 {
   struct proc_snapshot list[MAX_PROC_INFO];
   int count = collect_process_snapshots(list, MAX_PROC_INFO);
-
-  char buf[BUF_SIZE];
-  int offset = 0;
-
-  append(&buf[0], &offset, "name           pid     state     class     algorithm    wait time   deadline     run        arrival\n");
-  append(&buf[0], &offset, "------------------------------------------------------------------------------------------------------\n");
+  
+  
+  cprintf("name           pid     state     class     algorithm    wait time   deadline     run        arrival\n");
+  cprintf("------------------------------------------------------------------------------------------------------\n");
 
   for (int i = 0; i < count; i++) {
     struct proc_snapshot *p = &list[i];
 
-    pad_and_append(buf, &offset, p->name, 16);
-    pad_and_append_int(buf, &offset, p->pid, 8);
-    pad_and_append(buf, &offset, states[p->state], 10);
-    pad_and_append(buf, &offset, scheduling_classes[p->cal], 10);
-    pad_and_append(buf, &offset, scheduling_algorithms[p->cal], 15);
+    cprintf("%s", p->name);
+    int name_len = strlen(p->name);
+    for (int i = name_len; i < 16; i++) cprintf(" ");
+  
+    cprintf("%d", p->pid);
+    if (p->pid < 10) cprintf("      ");
+    else if (p->pid < 100) cprintf("     ");
+    else if (p->pid < 1000) cprintf("    ");
+    else cprintf("   ");
+  
+    cprintf("%s", states[p->state]);
+    int state_len = strlen(states[p->state]);
+    for (int i = state_len; i < 10; i++) cprintf(" ");
+  
+    cprintf("%s", scheduling_classes[p->cal]);
+    int class_len = strlen(scheduling_classes[p->cal]);
+    for (int i = class_len; i < 10; i++) cprintf(" ");
+  
+    cprintf("%s", scheduling_algorithms[p->cal]);
+    int algo_len = strlen(scheduling_algorithms[p->cal]);
+    for (int i = algo_len; i < 15; i++) cprintf(" ");
 
     int wait = p->waiting_time;
     int dl = (p->cal == EARLIEST_DEADLINE_FIRST ? p->deadline : 0);
     int run = (p->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL ? p->continous_time_to_run : 0);
     int arrival = (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL ? p->entering_time_to_the_fcfs_queue : p->arrival_time_to_system);
-
-    pad_and_append_int(buf, &offset, wait, 12);
-    pad_and_append_int(buf, &offset, dl, 12);
-    pad_and_append_int(buf, &offset, run, 12);
-    pad_and_append_int(buf, &offset, arrival, 0);
-
-    append(buf, &offset, "\n");
+    
+    // wait time
+    cprintf("%d", wait);
+    for (int i = 0; i < 12 - num_digits(wait); i++) cprintf(" ");
+    
+    // deadline
+    cprintf("%d", dl);
+    for (int i = 0; i < 12 - num_digits(dl); i++) cprintf(" ");
+    
+    // run
+    cprintf("%d", run);
+    for (int i = 0; i < 12 - num_digits(run); i++) cprintf(" ");
+    
+    // arrival
+    cprintf("%d\n", arrival);
   }
-
-  cprintf("%s", buf);
 }
+
