@@ -569,7 +569,10 @@ void scheduler(void)
     if(last_scheduled_process==0)
       last_scheduled_process=p;
     else if(p->pid!=last_scheduled_process->pid)
+    {
+      c->time_for_roundrobin=0;
       p->continous_time_to_run=0;
+    }
       
 
     swtch(&(c->scheduler), p->context);
