@@ -96,6 +96,7 @@ exec(char *path, char **argv)
   {
     curproc->cal=MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL;
     curproc->arrival_time_to_system=ticks;
+    curproc->entering_time_to_the_fcfs_queue=ticks;
     if(curproc->state==RUNNABLE)
     {
       number_of_runnable_multilevel_feedback_queue[0]--;
