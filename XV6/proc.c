@@ -567,7 +567,11 @@ void scheduler(void)
       number_of_runnable_multilevel_feedback_queue[1]--; //additional
     }
     if(last_scheduled_process==0)
+    {
+      c->time_for_roundrobin=0;
       last_scheduled_process=p;
+      p->continous_time_to_run=0;
+    }
     else if(p->pid!=last_scheduled_process->pid)
     {
       c->time_for_roundrobin=0;
