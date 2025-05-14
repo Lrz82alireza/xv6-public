@@ -1047,6 +1047,7 @@ change_process_queue(int pid, int new_queue_type)
   }
 
   p = get_proc_by_pid(pid);
+  cprintf("pid\t%d\t%d\t%d\n",p->pid,p->continous_time_to_run,ticks);
   if (p == 0) {
     release(&ptable.lock);
     cprintf("Error: no process found with pid %d\n", pid);
@@ -1080,13 +1081,17 @@ change_process_queue(int pid, int new_queue_type)
   number_of_runnable_multilevel_feedback_queue[1]++;
   }
 
-  if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) {
+
+
   acquire(&tickslock);
   saved_ticks = ticks;
   release(&tickslock);
+
+  
+  if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) {
   p->entering_time_to_the_fcfs_queue = saved_ticks;
-  p->arrival_time_to_system=saved_ticks;
   }
+  p->arrival_time_to_system=saved_ticks;
 
   p->waiting_time = 0;
   release(&ptable.lock);
@@ -1142,6 +1147,7 @@ print_process_info(void)
   acquire(&print_lock);
   struct proc_snapshot list[MAX_PROC_INFO];
   int count = collect_process_snapshots(list, MAX_PROC_INFO);
+  cprintf("ticks:\t%d\n",ticks);
   
   cprintf("name           pid     state     class     algorithm    wait time   deadline     run        arrival\n");
   cprintf("------------------------------------------------------------------------------------------------------\n");
