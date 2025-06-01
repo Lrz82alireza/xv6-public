@@ -1201,3 +1201,9 @@ print_process_info(void)
   sti();
 }
 
+// فراخوانی سیستی init_rw_lock ca4
+#include "rwlock.h"
+
+int sys_init_rw_lock(void) {
+  return rwlock_alloc();
+}
