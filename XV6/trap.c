@@ -111,7 +111,6 @@ trap(struct trapframe *tf)
     // Handle different scheduling algorithms
     if (myproc()->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL && mycpu()->time_for_roundrobin >= 3)
     {
-      myproc()->continous_time_to_run=0;
       mycpu()->time_for_roundrobin = 0;
       yield();
     }

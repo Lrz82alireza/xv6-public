@@ -567,9 +567,16 @@ void scheduler(void)
       number_of_runnable_multilevel_feedback_queue[1]--; //additional
     }
     if(last_scheduled_process==0)
+    {
+      c->time_for_roundrobin=0;
       last_scheduled_process=p;
-    else if(p->pid!=last_scheduled_process->pid)
       p->continous_time_to_run=0;
+    }
+    else if(p->pid!=last_scheduled_process->pid)
+    {
+      c->time_for_roundrobin=0;
+      p->continous_time_to_run=0;
+    }
       
 
     swtch(&(c->scheduler), p->context);
@@ -995,7 +1002,6 @@ create_realtime_process(int decided_deadline)
   p->deadline = saved_tick + decided_deadline;
   release(&tickslock);
 
-  cprintf("PID %d: Queue 2 to 1\n",p->pid);
   
   p->arrival_time_to_system=saved_tick;
 
@@ -1041,6 +1047,7 @@ change_process_queue(int pid, int new_queue_type)
   }
 
   p = get_proc_by_pid(pid);
+  cprintf("pid\t%d\t%d\t%d\n",p->pid,p->continous_time_to_run,ticks);
   if (p == 0) {
     release(&ptable.lock);
     cprintf("Error: no process found with pid %d\n", pid);
@@ -1074,13 +1081,17 @@ change_process_queue(int pid, int new_queue_type)
     number_of_runnable_multilevel_feedback_queue[1]++;
   }
 
-  if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) {
+
+
   acquire(&tickslock);
   saved_ticks = ticks;
   release(&tickslock);
+
+  
+  if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL) {
   p->entering_time_to_the_fcfs_queue = saved_ticks;
-  p->arrival_time_to_system=saved_ticks;
   }
+  p->arrival_time_to_system=saved_ticks;
 
   p->waiting_time = 0;
   release(&ptable.lock);
@@ -1136,6 +1147,7 @@ print_process_info(void)
   acquire(&print_lock);
   struct proc_snapshot list[MAX_PROC_INFO];
   int count = collect_process_snapshots(list, MAX_PROC_INFO);
+  cprintf("ticks:\t%d\n",ticks);
   
   cprintf("name           pid     state     class     algorithm    wait time   deadline     run        arrival\n");
   cprintf("------------------------------------------------------------------------------------------------------\n");
