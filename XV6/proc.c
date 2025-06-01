@@ -1068,17 +1068,17 @@ change_process_queue(int pid, int new_queue_type)
 
   if (p->state == RUNNABLE) {
   if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
-  number_of_runnable_multilevel_feedback_queue[0]--;
+    number_of_runnable_multilevel_feedback_queue[0]--;
   else if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL)
-  number_of_runnable_multilevel_feedback_queue[1]--;
+    number_of_runnable_multilevel_feedback_queue[1]--;
   }
 
   p->cal = new_queue_type;
   if (p->state == RUNNABLE) {
-  if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
-  number_of_runnable_multilevel_feedback_queue[0]++;
+    if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
+      number_of_runnable_multilevel_feedback_queue[0]++;
   else
-  number_of_runnable_multilevel_feedback_queue[1]++;
+    number_of_runnable_multilevel_feedback_queue[1]++;
   }
 
 
