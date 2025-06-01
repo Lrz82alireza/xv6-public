@@ -51,3 +51,32 @@ int rwlock_alloc(void) {
   }
   return -1;  // ظرفیت قفل‌ها پر شده
 }
+
+
+static int shared_var = 0;
+
+int run_rw_pattern(int lock_id, int pattern) {
+  if (lock_id < 0 || lock_id >= NRWLOCKS)
+    return -1;
+
+  struct rwlock *lock = &rwlocks[lock_id];
+  if (!lock->used)
+    return -1;
+
+  for (int i = 0; i < 32; i++) {
+    int bit = (pattern >> i) & 1;
+
+    if (bit == 0) {
+      reader_acquire(lock);
+      cprintf("[Reader %d] shared_var = %d\n", i, shared_var);
+      reader_release(lock);
+    } else {
+      writer_acquire(lock);
+      shared_var += 1;
+      cprintf("[Writer %d] shared_var updated to %d\n", i, shared_var);
+      writer_release(lock);
+    }
+  }
+
+  return 0;
+}

@@ -25,4 +25,7 @@ void writer_release(struct rwlock *lock);
 // درخواست قفل جدید
 int rwlock_alloc(void);
 
+int run_rw_pattern(int lock_id, int pattern);
+
+
 #endif

@@ -1207,3 +1207,13 @@ print_process_info(void)
 int sys_init_rw_lock(void) {
   return rwlock_alloc();
 }
+
+int sys_get_rw_pattern(void) {
+  int pattern;
+  if (argint(0, &pattern) < 0)
+    return -1;
+
+  int lock_id = 0;  // فعلاً فقط با اولین قفل کار می‌کنیم
+
+  return run_rw_pattern(lock_id, pattern);
+}
