@@ -115,10 +115,13 @@ extern int  sys_logs(void);
 // diff
 extern int sys_diff(void);
 
-
 extern int sys_create_realtime_process(void); //additional
 extern int sys_change_process_queue(void); 
 extern int sys_print_process_info(void);
+
+//rwlocks 
+extern int sys_init_rw_lock(void);
+extern int sys_get_rw_pattern(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -154,11 +157,13 @@ static int (*syscalls[])(void) = {
 // diff
 [SYS_diff] sys_diff,
 
-
 [SYS_create_realtime_process] sys_create_realtime_process, //additional
 [SYS_change_process_queue] sys_change_process_queue, 
 [SYS_print_process_info] sys_print_process_info,
 
+//rwlocks 
+[SYS_init_rw_lock]    sys_init_rw_lock,
+[SYS_get_rw_pattern]  sys_get_rw_pattern,
 
 };
 

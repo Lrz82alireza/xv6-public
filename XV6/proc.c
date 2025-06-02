@@ -1202,18 +1202,34 @@ print_process_info(void)
 }
 
 // فراخوانی سیستی init_rw_lock ca4
+#include "types.h"
+#include "defs.h"
 #include "rwlock.h"
+#include "stdbool.h"
 
 int sys_init_rw_lock(void) {
   return rwlock_alloc();
 }
 
+
 int sys_get_rw_pattern(void) {
+  int lock_id;
   int pattern;
-  if (argint(0, &pattern) < 0)
+
+  // گرفتن آرگومان اول: lock_id
+  if (argint(0, &lock_id) < 0)
     return -1;
 
-  int lock_id = 0;  // فعلاً فقط با اولین قفل کار می‌کنیم
+  // گرفتن آرگومان دوم: pattern
+  if (argint(1, &pattern) < 0)
+    return -1;
 
-  return run_rw_pattern(lock_id, pattern);
+  // تبدیل pattern به آرایه
+  bool ops[32];
+  for (int i = 0; i < 32; i++) {
+    ops[i] = (pattern >> i) & 1;  // true = writer, false = reader
+  }
+
+  return run_rw_pattern(lock_id, ops, 32);
 }
+

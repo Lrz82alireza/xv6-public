@@ -43,3 +43,5 @@ SYSCALL(create_realtime_process)
 SYSCALL(change_process_queue)
 SYSCALL(print_process_info)
 
+SYSCALL(init_rw_lock)
+SYSCALL(get_rw_pattern)

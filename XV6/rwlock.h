@@ -4,6 +4,8 @@
 
 #define NRWLOCKS 4  // تعداد مجاز قفل‌ها
 
+#include "stdbool.h"
+
 struct rwlock {
   int readcount;
   int sem_mutex_index;
@@ -25,7 +27,7 @@ void writer_release(struct rwlock *lock);
 // درخواست قفل جدید
 int rwlock_alloc(void);
 
-int run_rw_pattern(int lock_id, int pattern);
+int run_rw_pattern(int lock_id, bool *ops, int len);
 
 
 #endif
