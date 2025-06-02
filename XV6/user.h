@@ -33,14 +33,16 @@ int logout();
 int logs();
 int diff(const char* file1, const char* file2);
 
-int barber_init(void);
-int customer_arrive(void);
-int barber_sleep(void);
-int cut_hair(void);
 
 int create_realtime_process(int);
 int change_process_queue(int pid, int queue);
 int print_process_info(void);
+void barber_sleep(void);
+int customer_arrive(void);
+void cut_hair(void);
+void init_rw_lock(void);
+void get_rw_pattern(int pattern);
+void critical_section(void);
 
 // ulib.c
 int stat(const char*, struct stat*);

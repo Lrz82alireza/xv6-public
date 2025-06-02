@@ -114,19 +114,17 @@ extern int  sys_logout(void);
 extern int  sys_logs(void);
 // diff
 extern int sys_diff(void);
-// barber problem
+
+
+extern int sys_create_realtime_process(void); //additional
+extern int sys_change_process_queue(void); 
+extern int sys_print_process_info(void);
 extern int sys_barber_sleep(void);
 extern int sys_customer_arrive(void);
 extern int sys_cut_hair(void);
-extern int sys_barber_init(void);
-
-extern int sys_create_realtime_process(void); //additional
-extern int sys_change_process_queue(void);
-extern int sys_print_process_info(void);
-
-//rwlocks 
 extern int sys_init_rw_lock(void);
 extern int sys_get_rw_pattern(void);
+extern int sys_critical_section(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -162,17 +160,17 @@ static int (*syscalls[])(void) = {
 // diff
 [SYS_diff] sys_diff,
 
+
 [SYS_create_realtime_process] sys_create_realtime_process, //additional
 [SYS_change_process_queue] sys_change_process_queue, 
 [SYS_print_process_info] sys_print_process_info,
-
 [SYS_barber_sleep] sys_barber_sleep,
 [SYS_customer_arrive] sys_customer_arrive,
 [SYS_cut_hair] sys_cut_hair,
-[SYS_barber_init] sys_barber_init,
-//rwlocks 
-// [SYS_init_rw_lock]    sys_init_rw_lock,
-// [SYS_get_rw_pattern]  sys_get_rw_pattern,
+[SYS_init_rw_lock] sys_init_rw_lock,
+[SYS_get_rw_pattern] sys_get_rw_pattern,
+[SYS_critical_section] sys_critical_section,
+
 
 };
 
