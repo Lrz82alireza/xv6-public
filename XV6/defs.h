@@ -132,15 +132,16 @@ int             logs(void);
 
 int             diff(const char *file1, const char *file2);
 
-int             barber_sleep(void);
-int             customer_arrive(void);
-int             cut_hair(void);
-int             barber_init(void);
-
 //process scheduling
 int             create_realtime_process(int);
 int             change_process_queue(int pid, int queue);
 void            print_process_info(void);
+void            barber_sleep(void);
+int             customer_arrive(void);
+void            cut_hair(void);
+void            init_rw_lock(void);
+void            get_rw_pattern(int pattern);
+void            critical_section(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

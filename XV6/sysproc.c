@@ -7,10 +7,6 @@
 #include "mmu.h"
 #include "proc.h"
 
-#include "rwlock.h"
-#include "stdbool.h"
-
-
 int
 sys_fork(void)
 {
@@ -201,7 +197,7 @@ sys_change_process_queue(void)
     return -1;
 
   return change_process_queue(pid_of_target_process,queue_number);
-} 
+}
 
 int
 sys_print_process_info(void) 
@@ -211,45 +207,51 @@ sys_print_process_info(void)
 }
 
 int
-sys_barber_sleep(void) {
-  return barber_sleep();
+sys_barber_sleep()
+{
+  barber_sleep();
+  return 0;
 }
 
-int
-sys_customer_arrive(void) {
+
+
+int 
+sys_customer_arrive()
+{
   return customer_arrive();
 }
 
-int
-sys_cut_hair(void) {
-  return cut_hair();
+
+int 
+sys_cut_hair()
+{
+  cut_hair();
+  return 0;
 }
 
+
 int
-sys_barber_init(void) {
-  return barber_init();
+sys_init_rw_lock()
+{
+  init_rw_lock();
+  return 0;
 }
 
-// int sys_init_rw_lock(void) {
-//   return rwlock_alloc();
-// }
 
-// int sys_get_rw_pattern(void) {
-//   int lock_id;
-//   int pattern;
-
-//   if (argint(0, &lock_id) < 0)
-//     return -1;
-
-//   if (argint(1, &pattern) < 0)
-//     return -1;
-
-//   bool ops[32];
-//   for (int i = 0; i < 32; i++) {
-//     ops[i] = (pattern >> i) & 1;  // true = writer, false = reader
-//   }
-
-//   return run_rw_pattern(lock_id, ops, 32);
-// }
+int
+sys_get_rw_pattern()
+{
+  int pattern;
+  if(argint(0,&pattern) < 0)
+    return -1;
+  get_rw_pattern(pattern);
+  return 0;
+}
 
 
+int
+sys_critical_section()
+{
+  critical_section();
+  return 0;
+}

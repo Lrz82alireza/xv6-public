@@ -8,22 +8,10 @@
 #include "spinlock.h"
 
 #include "user_mgmt.h" 
-#include "semaphore.h"
-
-// Barber problem
-#define CHAIRS 6
-#define CHAIRS_SEM        0 
-#define BARBER_READY_SEM 1
-#define CUSTOMER_DONE_SEM 2
-#define MUTEX_SEM         3
-
 
 #define MAX_PROC_INFO 64
 
-extern struct semaphore sem_table[];
-
 struct spinlock print_lock;
-struct spinlock log_lock;
 
 struct proc_snapshot {
   char name[16];
@@ -36,6 +24,54 @@ struct proc_snapshot {
   int entering_time_to_the_fcfs_queue;
   int arrival_time_to_system;
 };
+
+
+
+typedef struct barber_duty
+{
+  struct spinlock barber_is_working;
+  struct proc *barber_process;
+  int is_barber_sleeping;
+} barber_duty;
+barber_duty barber;
+typedef struct customer_duty
+{
+  struct spinlock modify_customer_queue;
+  int number_of_customer;
+  int waiting_customer[5];
+  int waiting_customer_head;
+  int waiting_customer_tail;
+} customer_duty;
+customer_duty customer;
+int number_of_all_customer = 0;
+
+
+
+
+typedef struct reader_writer
+{
+  struct spinlock critical_section;
+  struct spinlock is_writer_waiting;
+  struct spinlock waiting_reader;
+  int counter;
+  int active_reader_count;
+  int active_writer_count;
+  int number_of_waiting_writer;
+  int number_of_waiting_reader;
+  int waiting_writer_head;
+  int waiting_writer_tail;
+  int waiting_writer_pid[64];
+  int waiting_reader_head;
+  int waiting_reader_tail;
+  int waiting_reader_pid[64];
+  int number_of_woke_up_reader;
+} reader_writer;
+reader_writer rw;
+int sequence[100];
+int number_of_processes_in_sequence = 0;
+struct spinlock sequence_process_lock;
+
+
 
 
 int number_of_runnable_processes_in_edf_queue=0; //additional
@@ -75,8 +111,19 @@ void
 pinit(void)
 {
   initlock(&print_lock , "print");
-  initlock(&log_lock , "log");
   initlock(&ptable.lock, "ptable");
+  initlock(&barber.barber_is_working, "barber_is_working");
+  initlock(&customer.modify_customer_queue, "modify_customer_queue");
+  for (int i = 0; i < 5; i++)
+  {
+    customer.waiting_customer[i] = 0;
+  }
+  customer.number_of_customer = 0;
+  barber.is_barber_sleeping = 0;
+  barber.barber_process = 0;
+  customer.waiting_customer_head = 0;
+  customer.waiting_customer_tail = 0;
+  number_of_all_customer=0;
 }
 
 // Must be called with interrupts disabled
@@ -449,6 +496,11 @@ earliest_deadline_first_scheduler() //additional
   
   return edf_process_to_schedule;
 }
+
+
+
+
+
 
 
 struct proc*
@@ -957,6 +1009,8 @@ set_sleep_syscall(int input_tick)
 
 
 
+
+
 void
 aging_mechanism() //additional
 {
@@ -1074,17 +1128,17 @@ change_process_queue(int pid, int new_queue_type)
 
   if (p->state == RUNNABLE) {
   if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
-    number_of_runnable_multilevel_feedback_queue[0]--;
+  number_of_runnable_multilevel_feedback_queue[0]--;
   else if (p->cal == MULTILEVEL_FEEDBACK_QUEUE_SECOND_LEVEL)
-    number_of_runnable_multilevel_feedback_queue[1]--;
+  number_of_runnable_multilevel_feedback_queue[1]--;
   }
 
   p->cal = new_queue_type;
   if (p->state == RUNNABLE) {
-    if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
-      number_of_runnable_multilevel_feedback_queue[0]++;
+  if (new_queue_type == MULTILEVEL_FEEDBACK_QUEUE_FIRST_LEVEL)
+  number_of_runnable_multilevel_feedback_queue[0]++;
   else
-    number_of_runnable_multilevel_feedback_queue[1]++;
+  number_of_runnable_multilevel_feedback_queue[1]++;
   }
 
 
@@ -1207,60 +1261,282 @@ print_process_info(void)
   sti();
 }
 
-// barer problem
-void safe_log(char *msg) {
-  acquire(&log_lock);
-  cprintf("[PID %d] %s\n", myproc()->pid, msg);
-  release(&log_lock);
-}
 
-int customer_arrive(void) {
-  sema_wait(MUTEX_SEM); 
 
-  if (sem_table[CHAIRS_SEM].value <= 0) {
-    sema_signal(MUTEX_SEM);
-    safe_log("Customer: no available chairs, leaving...");
-    return -1;
+void barber_sleep()
+{
+  if (number_of_all_customer >= 10 && customer.number_of_customer==0)
+  {
+    cprintf("barber with pid %d is exiting", myproc()->pid);
+    exit();
   }
+  acquire(&barber.barber_is_working);
+  if (customer.number_of_customer == 0)
+  {
+    cprintf("barber with pid %d is going to sleep\n", myproc()->pid);
+    barber.barber_process = myproc();
+    barber.is_barber_sleeping = 1;
+    sleep(barber.barber_process, &barber.barber_is_working);
+    barber.is_barber_sleeping = 0;
+    if (number_of_all_customer >= 10 && customer.number_of_customer==0)
+    {
+      cprintf("barber with pid %d is exiting", myproc()->pid);
+      release(&barber.barber_is_working);
+      exit();
+    }
+    else
+      cprintf("barber with pid %d woke up\n", myproc()->pid);
+  }
+  release(&barber.barber_is_working);
+}
 
-  safe_log("Customer: took a seat.");
 
-  sema_wait(CHAIRS_SEM);
-  sema_signal(MUTEX_SEM);
-
-  sema_signal(BARBER_READY_SEM);
-  sema_wait(CUSTOMER_DONE_SEM);
+int customer_arrive()
+{
+  cprintf("customer with pid %d is entering the shop\n", myproc()->pid);
+  acquire(&customer.modify_customer_queue);
+  if (number_of_all_customer >= 10)
+  {
+    if (barber.is_barber_sleeping)
+      wakeup(barber.barber_process);
+    release(&customer.modify_customer_queue);
+    return 1;
+  }
+  number_of_all_customer++;
+  if (customer.number_of_customer >= 5)
+  {
+    cprintf("customer with pid %d can't enter for getting service because number of waitind customer is 5\n", myproc()->pid);
+    release(&customer.modify_customer_queue);
+    return 1;
+  }
+  customer.waiting_customer[customer.waiting_customer_tail] = myproc()->pid;
+  customer.waiting_customer_tail = (customer.waiting_customer_tail + 1) % 5;
+  customer.number_of_customer++;
+  if (barber.is_barber_sleeping)
+  {
+    cprintf("customer with pid %d is waking up the barber\n", myproc()->pid);
+    wakeup(barber.barber_process);
+  }
+  sleep(myproc(), &customer.modify_customer_queue);
+  cprintf("customer with pid %d got haircut and is exiting\n", myproc()->pid);
+  release(&customer.modify_customer_queue);
   return 0;
 }
 
-int barber_sleep(void) {
-  safe_log("Barber: sleeping...");
-  sema_wait(BARBER_READY_SEM);
-  return 0;
-}
 
-int cut_hair(void) {
-  safe_log("Barber: woke up, got customer");
-
-  volatile int i, j;
-  int slices = 10000;
-  for(i = 0; i < slices; i++) {
-    for(j = 0; j < 5000; j++) {
-      continue;
+void cut_hair()
+{
+  int current_customer_pid = 0;
+  if (number_of_all_customer >= 10 && customer.number_of_customer == 0)
+  {
+    cprintf("barber with pid %d is exiting\n", myproc()->pid);
+    exit();
+  }
+  acquire(&barber.barber_is_working);
+  if (customer.number_of_customer > 0)
+  {
+    acquire(&customer.modify_customer_queue);
+    current_customer_pid = customer.waiting_customer[customer.waiting_customer_head];
+    customer.waiting_customer_head = (customer.waiting_customer_head + 1) % 5;
+    customer.number_of_customer--;
+    cprintf("barber with pid %d is cutting hair of customer with pid %d\n", myproc()->pid, current_customer_pid, number_of_all_customer);
+    release(&customer.modify_customer_queue);
+    int k = 0;
+    for (int i = 0; i < 1000; i++)
+      for (int j = 0; j < 1000; j++)
+        k++;
+    cprintf("barber with pid %d finished cutting hair of customer with pid %d\n", myproc()->pid, current_customer_pid);
+    release(&barber.barber_is_working);
+    wakeup(get_proc_by_pid(current_customer_pid));
+    if (number_of_all_customer >= 10 && customer.number_of_customer == 0)
+    {
+      cprintf("barber with pid %d is exiting\n", myproc()->pid);
+      exit();
     }
   }
-
-  safe_log("Barber: haircut done.");
-
-  sema_signal(CUSTOMER_DONE_SEM);
-  sema_signal(CHAIRS_SEM);
-  return 0;
+  else
+    release(&barber.barber_is_working);
 }
 
-int barber_init(void){
-  sema_init(CHAIRS_SEM, CHAIRS);
-  sema_init(BARBER_READY_SEM, 0);
-  sema_init(CUSTOMER_DONE_SEM, 0);
-  sema_init(MUTEX_SEM, 1);
-  return 0;
+
+void init_rw_lock()
+{
+  initlock(&rw.critical_section, "critical_section");
+  initlock(&rw.is_writer_waiting, "is_writer_waiting");
+  initlock(&rw.waiting_reader, "waiting_reader");
+  initlock(&sequence_process_lock, "sequence_process_lock");
+  rw.counter = 0;
+  rw.active_reader_count = 0;
+  rw.active_writer_count = 0;
+  rw.number_of_waiting_writer = 0;
+  rw.waiting_writer_head = 0;
+  rw.waiting_writer_tail = 0;
+  rw.waiting_reader_head = 0;
+  rw.waiting_reader_tail = 0;
+  rw.number_of_waiting_reader = 0;
+  rw.number_of_woke_up_reader=0;
+  for (int i = 0; i < 64; i++) {
+    rw.waiting_writer_pid[i] = 0;
+    rw.waiting_reader_pid[i] = 0;
+  }
 }
+
+void writer_write_lock()
+{
+  acquire(&rw.is_writer_waiting);
+  if (rw.active_reader_count > 0 || rw.active_writer_count > 0 || rw.number_of_waiting_writer > 0 || rw.number_of_woke_up_reader>0)
+  {
+    rw.waiting_writer_pid[rw.waiting_writer_tail] = myproc()->pid;
+    rw.waiting_writer_tail = (rw.waiting_writer_tail + 1) % 64;
+    rw.number_of_waiting_writer++;
+    cprintf("writer with pid %d is going to sleep\n", myproc()->pid);
+    sleep(myproc(), &rw.is_writer_waiting);
+    rw.number_of_waiting_writer--;
+    cprintf("writer with pid %d is waking up\n", myproc()->pid);
+    release(&rw.is_writer_waiting);
+  }
+  else
+    release(&rw.is_writer_waiting);
+  acquire(&rw.critical_section);
+  rw.active_writer_count = 1;
+}
+
+void reader_read_lock()
+{
+  acquire(&rw.waiting_reader);
+  if (rw.number_of_waiting_writer > 0 || rw.active_writer_count > 0)
+  {
+    cprintf("reader with pid %d is going to sleep\n", myproc()->pid);
+    rw.waiting_reader_pid[rw.waiting_reader_tail] = myproc()->pid;
+    rw.waiting_reader_tail = (rw.waiting_reader_tail + 1) % 64;
+    rw.number_of_waiting_reader++;
+    sleep(myproc(), &rw.waiting_reader);
+    rw.number_of_waiting_reader--;
+    cprintf("reader with pid %d woke up\n", myproc()->pid);
+    release(&rw.waiting_reader);
+  }
+  else
+    release(&rw.waiting_reader);
+  acquire(&rw.critical_section);
+  rw.active_reader_count++;
+  release(&rw.critical_section);
+}
+
+void get_rw_pattern(int pattern) // reader_writer
+{
+  acquire(&sequence_process_lock);
+  number_of_processes_in_sequence = 0;
+  int temp_pattern = pattern;
+  while (temp_pattern > 0)
+  {
+    sequence[number_of_processes_in_sequence] = temp_pattern % 2;
+    temp_pattern /= 2;
+    number_of_processes_in_sequence++;
+  }
+  number_of_processes_in_sequence--;
+  release(&sequence_process_lock);
+}
+
+void reader_critical_section()
+{
+  cprintf("reader with pid %d is in critical section\n", myproc()->pid);
+  cprintf("reader with pid %d is reading counter value that is %d\n", myproc()->pid, rw.counter);
+  cprintf("reader with pid %d is exiting critical section\n", myproc()->pid);
+}
+
+void reader_release_lock()
+{
+  rw.active_reader_count--;
+  rw.number_of_woke_up_reader=0;
+  if (rw.active_reader_count == 0 && rw.number_of_waiting_writer > 0)
+  {
+    acquire(&rw.is_writer_waiting);
+    if (rw.number_of_waiting_writer > 0)
+    {
+      cprintf("reader with pid %d is waking up writer with pid %d\n", myproc()->pid, rw.waiting_writer_pid[rw.waiting_writer_head]);
+      wakeup(get_proc_by_pid(rw.waiting_writer_pid[rw.waiting_writer_head]));
+      rw.waiting_writer_head = (rw.waiting_writer_head + 1) % 64;
+    }
+    release(&rw.is_writer_waiting);
+  }
+}
+
+void writer_release_lock()
+{
+  
+  
+  if (rw.number_of_waiting_writer > 0)
+  {
+    rw.active_writer_count--;
+    release(&rw.critical_section);
+    acquire(&rw.is_writer_waiting);
+    if (rw.number_of_waiting_writer > 0)
+    {
+      cprintf("writer with pid %d is waking up writer with pid %d\n", myproc()->pid, rw.waiting_writer_pid[rw.waiting_writer_head]);
+      wakeup(get_proc_by_pid(rw.waiting_writer_pid[rw.waiting_writer_head]));
+      rw.waiting_writer_head = (rw.waiting_writer_head + 1) % 64;
+    }
+    release(&rw.is_writer_waiting);
+  }
+  else if (rw.number_of_waiting_reader > 0)
+  {
+    rw.active_writer_count--;
+    release(&rw.critical_section);
+    acquire(&rw.waiting_reader);
+    int number_of_reader_to_wake = rw.number_of_waiting_reader;
+    for (int i = 0; i < number_of_reader_to_wake; i++)
+    {
+      if(rw.number_of_waiting_writer>0)
+        break;
+      int new_reader_pid = rw.waiting_reader_pid[rw.waiting_reader_head];
+      if (new_reader_pid != 0)
+      {
+        cprintf("writer with pid %d is waking up reader with pid %d\n", myproc()->pid, new_reader_pid);
+        rw.number_of_woke_up_reader++;
+        wakeup(get_proc_by_pid(rw.waiting_reader_pid[rw.waiting_reader_head]));
+      }
+      rw.waiting_reader_head = (rw.waiting_reader_head + 1) % 64;
+    }
+    rw.number_of_waiting_reader = 0;
+    release(&rw.waiting_reader);
+  }
+  else
+  {
+    rw.active_writer_count--;
+    release(&rw.critical_section);
+  }
+  
+  
+}
+
+void writer_critical_section()
+{
+  cprintf("writer with pid %d is in critical section\n", myproc()->pid);
+  rw.counter++;
+  cprintf("writer with pid %d incremented the count and new count value is %d\n", myproc()->pid, rw.counter);
+  cprintf("writer with pid %d is exiting critical section\n", myproc()->pid);
+}
+
+void critical_section()
+{
+  int duty=0;
+  acquire(&sequence_process_lock);
+  duty = sequence[number_of_processes_in_sequence - 1];
+  number_of_processes_in_sequence--;
+  cprintf("Process %d got duty %d\n", myproc()->pid, duty, number_of_processes_in_sequence);
+  release(&sequence_process_lock);
+  
+  if (duty == 0)
+  {
+    reader_read_lock();
+    reader_critical_section();
+    reader_release_lock();
+  }
+  else if (duty == 1)
+  {
+    writer_write_lock();
+    writer_critical_section();
+    writer_release_lock();
+  }
+}
+
