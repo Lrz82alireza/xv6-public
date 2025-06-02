@@ -33,7 +33,6 @@
 // diff
 #define SYS_diff 29
 
-
 #define SYS_create_realtime_process 30 //additional
 #define SYS_change_process_queue 31
 #define SYS_print_process_info 32
@@ -43,3 +42,6 @@
 #define SYS_customer_arrive 34
 #define SYS_cut_hair 35
 #define SYS_barber_init 36
+
+#define SYS_init_rw_lock     37
+#define SYS_get_rw_pattern   38

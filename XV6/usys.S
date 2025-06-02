@@ -47,3 +47,6 @@ SYSCALL(barber_sleep)
 SYSCALL(customer_arrive)
 SYSCALL(cut_hair)
 SYSCALL(barber_init)
+
+SYSCALL(init_rw_lock)
+SYSCALL(get_rw_pattern)

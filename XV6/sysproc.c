@@ -7,6 +7,10 @@
 #include "mmu.h"
 #include "proc.h"
 
+#include "rwlock.h"
+#include "stdbool.h"
+
+
 int
 sys_fork(void)
 {
@@ -225,3 +229,27 @@ int
 sys_barber_init(void) {
   return barber_init();
 }
+
+int sys_init_rw_lock(void) {
+  return rwlock_alloc();
+}
+
+int sys_get_rw_pattern(void) {
+  int lock_id;
+  int pattern;
+
+  if (argint(0, &lock_id) < 0)
+    return -1;
+
+  if (argint(1, &pattern) < 0)
+    return -1;
+
+  bool ops[32];
+  for (int i = 0; i < 32; i++) {
+    ops[i] = (pattern >> i) & 1;  // true = writer, false = reader
+  }
+
+  return run_rw_pattern(lock_id, ops, 32);
+}
+
+

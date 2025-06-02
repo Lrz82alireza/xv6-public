@@ -1208,40 +1208,6 @@ print_process_info(void)
 }
 
 // barer problem
-void sprint(char *dst, const char *msg, int n)
-{
-  while (*msg)
-    *dst++ = *msg++;
-
-  char buf[16];
-  int i = 0;
-
-  if (n == 0) {
-    *dst++ = '0';
-    *dst = 0;
-    return;
-  }
-
-  int sign = 0;
-  if (n < 0) {
-    sign = 1;
-    n = -n;
-  }
-
-  while (n) {
-    buf[i++] = (n % 10) + '0';
-    n /= 10;
-  }
-
-  if (sign)
-    *dst++ = '-';
-
-  while (i--)
-    *dst++ = buf[i];
-
-  *dst = 0;
-}
-
 void safe_log(char *msg) {
   acquire(&log_lock);
   cprintf("[PID %d] %s\n", myproc()->pid, msg);
@@ -1298,3 +1264,4 @@ int barber_init(void){
   sema_init(MUTEX_SEM, 1);
   return 0;
 }
+
