@@ -1264,4 +1264,3 @@ int barber_init(void){
   sema_init(MUTEX_SEM, 1);
   return 0;
 }
-
