@@ -37,3 +37,9 @@
 #define SYS_create_realtime_process 30 //additional
 #define SYS_change_process_queue 31
 #define SYS_print_process_info 32
+
+
+#define SYS_barber_sleep 33
+#define SYS_customer_arrive 34
+#define SYS_cut_hair 35
+#define SYS_barber_init 36

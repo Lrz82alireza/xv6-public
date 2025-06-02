@@ -114,10 +114,14 @@ extern int  sys_logout(void);
 extern int  sys_logs(void);
 // diff
 extern int sys_diff(void);
-
+// barber problem
+extern int sys_barber_sleep(void);
+extern int sys_customer_arrive(void);
+extern int sys_cut_hair(void);
+extern int sys_barber_init(void);
 
 extern int sys_create_realtime_process(void); //additional
-extern int sys_change_process_queue(void); 
+extern int sys_change_process_queue(void);
 extern int sys_print_process_info(void);
 
 static int (*syscalls[])(void) = {
@@ -159,6 +163,10 @@ static int (*syscalls[])(void) = {
 [SYS_change_process_queue] sys_change_process_queue, 
 [SYS_print_process_info] sys_print_process_info,
 
+[SYS_barber_sleep] sys_barber_sleep,
+[SYS_customer_arrive] sys_customer_arrive,
+[SYS_cut_hair] sys_cut_hair,
+[SYS_barber_init] sys_barber_init,
 
 };
 

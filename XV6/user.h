@@ -33,6 +33,10 @@ int logout();
 int logs();
 int diff(const char* file1, const char* file2);
 
+int barber_init(void);
+int customer_arrive(void);
+int barber_sleep(void);
+int cut_hair(void);
 
 int create_realtime_process(int);
 int change_process_queue(int pid, int queue);

@@ -8,10 +8,22 @@
 #include "spinlock.h"
 
 #include "user_mgmt.h" 
+#include "semaphore.h"
+
+// Barber problem
+#define CHAIRS 5
+#define CHAIRS_SEM        0 
+#define BARBER_READY_SEM 1
+#define CUSTOMER_DONE_SEM 2
+#define MUTEX_SEM         3
+
 
 #define MAX_PROC_INFO 64
 
+extern struct semaphore sem_table[];
+
 struct spinlock print_lock;
+struct spinlock log_lock;
 
 struct proc_snapshot {
   char name[16];
@@ -63,6 +75,7 @@ void
 pinit(void)
 {
   initlock(&print_lock , "print");
+  initlock(&log_lock , "log");
   initlock(&ptable.lock, "ptable");
 }
 
@@ -436,11 +449,6 @@ earliest_deadline_first_scheduler() //additional
   
   return edf_process_to_schedule;
 }
-
-
-
-
-
 
 
 struct proc*
@@ -949,8 +957,6 @@ set_sleep_syscall(int input_tick)
 
 
 
-
-
 void
 aging_mechanism() //additional
 {
@@ -1201,3 +1207,94 @@ print_process_info(void)
   sti();
 }
 
+// barer problem
+void sprint(char *dst, const char *msg, int n)
+{
+  while (*msg)
+    *dst++ = *msg++;
+
+  char buf[16];
+  int i = 0;
+
+  if (n == 0) {
+    *dst++ = '0';
+    *dst = 0;
+    return;
+  }
+
+  int sign = 0;
+  if (n < 0) {
+    sign = 1;
+    n = -n;
+  }
+
+  while (n) {
+    buf[i++] = (n % 10) + '0';
+    n /= 10;
+  }
+
+  if (sign)
+    *dst++ = '-';
+
+  while (i--)
+    *dst++ = buf[i];
+
+  *dst = 0;
+}
+
+void safe_log(char *msg) {
+  acquire(&log_lock);
+  cprintf("[PID %d] %s\n", myproc()->pid, msg);
+  release(&log_lock);
+}
+
+int customer_arrive(void) {
+  sema_wait(MUTEX_SEM); 
+
+  if (sem_table[CHAIRS_SEM].value <= 0) {
+    sema_signal(MUTEX_SEM);
+    safe_log("Customer: no available chairs, leaving...");
+    return -1;
+  }
+
+  safe_log("Customer: took a seat.");
+
+  sema_wait(CHAIRS_SEM);
+  sema_signal(MUTEX_SEM);
+
+  sema_signal(BARBER_READY_SEM);
+  sema_wait(CUSTOMER_DONE_SEM);
+  return 0;
+}
+
+int barber_sleep(void) {
+  safe_log("Barber: sleeping...");
+  sema_wait(BARBER_READY_SEM);
+  return 0;
+}
+
+int cut_hair(void) {
+  safe_log("Barber: woke up, got customer");
+
+  volatile int i, j;
+  int slices = 10000;
+  for(i = 0; i < slices; i++) {
+    for(j = 0; j < 5000; j++) {
+      continue;
+    }
+  }
+
+  safe_log("Barber: haircut done.");
+
+  sema_signal(CUSTOMER_DONE_SEM);
+  sema_signal(CHAIRS_SEM);
+  return 0;
+}
+
+int barber_init(void){
+  sema_init(CHAIRS_SEM, 5);
+  sema_init(BARBER_READY_SEM, 0);
+  sema_init(CUSTOMER_DONE_SEM, 0);
+  sema_init(MUTEX_SEM, 1);
+  return 0;
+}

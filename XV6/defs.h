@@ -132,6 +132,11 @@ int             logs(void);
 
 int             diff(const char *file1, const char *file2);
 
+int             barber_sleep(void);
+int             customer_arrive(void);
+int             cut_hair(void);
+int             barber_init(void);
+
 //process scheduling
 int             create_realtime_process(int);
 int             change_process_queue(int pid, int queue);

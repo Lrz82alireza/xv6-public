@@ -4,9 +4,10 @@
 #include "param.h"
 
 #define NSEM 6 
-    
+
 struct semaphore {
   int value;
+  int last_waker_pid;
   struct spinlock lock;
   struct proc *queue[NPROC];
   int head, tail;

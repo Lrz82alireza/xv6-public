@@ -195,6 +195,8 @@ UPROGS=\
 	_testgetpid\
 	_set_sleep_syscall\
 	_sched_tests\
+	_barber_test\
+	_barber\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -231,7 +233,7 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 	then echo "-gdb tcp::$(GDBPORT)"; \
 	else echo "-s -p $(GDBPORT)"; fi)
 ifndef CPUS
-CPUS := 1
+CPUS := 4
 endif
 QEMUOPTS = -drive file=fs.img,index=1,media=disk,format=raw -drive file=xv6.img,index=0,media=disk,format=raw -smp cpus=$(CPUS),cores=1,threads=1,sockets=$(CPUS) -m 512 $(QEMUEXTRA)
 
@@ -266,7 +268,7 @@ EXTRA=\
 	mkfs.c ulib.c user.h cat.c echo.c forktest.c grep.c kill.c\
 	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c\
 	printf.c umalloc.c\ user_curly_brace_correction_check.c\ next_palindrome.c\ set_sleep_syscall.c\
-	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\ sched_tests.c\
+	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\ sched_tests.c\ barber_test.c\ barber.c\
 	.gdbinit.tmpl gdbutil\
 
 dist:

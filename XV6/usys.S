@@ -43,3 +43,7 @@ SYSCALL(create_realtime_process)
 SYSCALL(change_process_queue)
 SYSCALL(print_process_info)
 
+SYSCALL(barber_sleep)
+SYSCALL(customer_arrive)
+SYSCALL(cut_hair)
+SYSCALL(barber_init)

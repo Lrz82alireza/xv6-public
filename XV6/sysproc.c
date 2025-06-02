@@ -197,11 +197,31 @@ sys_change_process_queue(void)
     return -1;
 
   return change_process_queue(pid_of_target_process,queue_number);
-}
+} 
 
 int
 sys_print_process_info(void) 
 {
   print_process_info();
   return 0;
+}
+
+int
+sys_barber_sleep(void) {
+  return barber_sleep();
+}
+
+int
+sys_customer_arrive(void) {
+  return customer_arrive();
+}
+
+int
+sys_cut_hair(void) {
+  return cut_hair();
+}
+
+int
+sys_barber_init(void) {
+  return barber_init();
 }

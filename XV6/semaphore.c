@@ -33,6 +33,7 @@ sema_wait(int index) {
   release(&s->lock);
 }
 
+
 void
 sema_signal(int index) {
   if(index < 0 || index >= NSEM) return;
